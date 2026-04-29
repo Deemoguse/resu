@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"skipLibCheck": true,
+
+		"strict": true,
+		"lib": ["ESNext"],
+		"target": "ESNext",
+		"module": "ESNext",
+
+		"composite": true,
+		"isolatedDeclarations": true,
+		"allowSyntheticDefaultImports": true,
+
+		"isolatedModules": true,
+		"erasableSyntaxOnly": true,
+
+		"baseUrl": "${configDir}",
+		"paths": { "@/*": ["./*"]}
+	},
+
+	"include": ["${configDir}/src"],
+	"exclude": ["${configDir}/dist"]
+}
