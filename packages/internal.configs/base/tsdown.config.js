@@ -1,5 +1,5 @@
 // @ts-check
-// @ts-expect-error
+
 import path from 'path'
 import { defineConfig, mergeConfig } from 'tsdown'
 
@@ -24,7 +24,6 @@ export function createConfig (override) {
  * @returns {string}
  */
 function fromRoot (relative) {
-	// @ts-expect-error
 	return path.resolve(process.cwd(), relative)
 }
 
@@ -46,6 +45,7 @@ function configWithFormat (format, override) {
 		format: format,
 
 		dts: true,
+		sourcemap: true,
 		alias: {
 			'@': fromRoot('./src/index.ts')
 		},
