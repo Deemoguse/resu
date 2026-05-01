@@ -1,0 +1,22 @@
+{
+	"private": true,
+	"type": "module",
+	"name": "@internal/configs",
+	"version": "1.0.0",
+	"exports": {
+		"./base/ts": "./base/ts.config.json",
+		"./base/eslint": "./base/eslint.config.js",
+		"./base/tsdown": "./base/tsdown.config.js"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@stylistic/eslint-plugin": "^5.10.0",
+		"globals": "^17.5.0",
+		"typescript-eslint": "^8.59.1"
+	},
+	"peerDependencies": {
+		"eslint": "^10.2.1",
+		"tsdown": "^0.21.10",
+		"typescript": "^6.0.3"
+	}
+}
