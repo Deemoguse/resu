@@ -2,7 +2,7 @@ import { Result } from '../utils/result'
 import { AST_NODE_TYPES } from '@typescript-eslint/utils'
 import type { TSESTree } from '@typescript-eslint/utils'
 
-export function extractIdentifierNode(
+export function extractId(
 	node: TSESTree.TypeNode,
 ): (
 	Result<'error', null, null> |
@@ -15,8 +15,8 @@ export function extractIdentifierNode(
 	if (containArgumentsNodes) return Result('error')
 
 	const nameNode = node.typeName
-	const nameTypeIsIndentifier = nameNode.type === AST_NODE_TYPES.Identifier
-	if (!nameTypeIsIndentifier) return Result('error')
+	const nameIsId = nameNode.type === AST_NODE_TYPES.Identifier
+	if (!nameIsId) return Result('error')
 
 	return Result('ok', null, nameNode)
 }

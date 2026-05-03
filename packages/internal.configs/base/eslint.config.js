@@ -17,8 +17,8 @@ export function createConfig (...args) {
 		{
 			ignores: [
 				'dist/**/*',
-				'eslint.config.ts',
-			]
+				'*.config.*'
+			],
 		},
 
 		eslintStylistic.configs.recommended,

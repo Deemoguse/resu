@@ -2,7 +2,7 @@ import { Result } from '../utils/result'
 import { AST_NODE_TYPES } from '@typescript-eslint/utils'
 import type { TSESTree } from '@typescript-eslint/utils'
 
-export function testConditionElseBranchReturnNever(
+export function testElseNever(
 	node: TSESTree.TSConditionalType,
 ): (
 	Result<'error', 'SafeError', null> |

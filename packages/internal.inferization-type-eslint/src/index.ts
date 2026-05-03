@@ -2,14 +2,14 @@ import { createRule } from './utils/create-rule'
 import { JsonSchema } from './utils/json-schema'
 import { MessageObject } from './utils/message-object'
 import { CreateReporter } from './utils/create-reporter'
-import { extractTupleFromConditionalNodes } from './processors/extract-conditional-tuple-nodes'
-import { testConditionElseBranchReturnNever } from './processors/test-condition-else-branch-return-never'
-import { testConditionType } from './processors/test-condition-types'
-import { testTupleIncludeAllParameters } from './processors/test-tuple-include-all-parameters'
-import { testOrderMustMatchGenericParameters } from './processors/test-order-must-match-generic-parameters'
-import { testNotContainNonGenericTypes } from './processors/test-not-contain-non-generic-types'
-import { testTupleMustNotContainDuplicateGenericTypes } from './processors/test-tuple-must-not-contain-duplicate-generic-types'
-import { testPatternMustInferAllGenericTypeParameters } from './processors/test-pattern-must-infer-all-generic-type-parameters'
+import { extractTuples } from './processors/extract-tuples'
+import { testElseNever } from './processors/test-else-never'
+import { testCondition } from './processors/test-condition'
+import { testAllParams } from './processors/test-all-params'
+import { testTupleOrder } from './processors/test-tuple-order'
+import { testOnlyParams } from './processors/test-only-params'
+import { testUniqueParams } from './processors/test-unique-params'
+import { testPattern } from './processors/test-pattern'
 import { fixRequired } from './fixers/fix-required'
 import type { ConfigObject, RuleDefinition } from '@eslint/core'
 
@@ -17,118 +17,142 @@ type Options = typeof Options.InferType
 const Options = JsonSchema({
 	type: 'object',
 	properties: {
-		enforceElseBranchMustReturnNever: { type: 'boolean', default: true },
-		enforceTupleOrderMustMatchGenericParameters: { type: 'boolean', default: true },
-		enforceTupleMustNotContainNonGenericTypes: { type: 'boolean', default: true },
-		enforceTupleMustNotContainDuplicateGenericTypes: { type: 'boolean', default: true },
+		enforceElseNever: {
+			type: 'boolean',
+		},
+		enforceTupleOrder: {
+			type: 'boolean',
+		},
+		enforceOnlyParams: {
+			type: 'boolean',
+		},
+		enforceUniqueParams: {
+			type: 'boolean',
+		},
+		enforcePattern: {
+			type: 'object',
+			properties: {
+				enable: { type: 'boolean' },
+				type: { type: 'string', pattern: 'any|unknown' },
+			},
+		},
 	},
 })
 
 type MessageData = typeof Message.InferType
 type Message = keyof MessageData
 const Message = MessageObject({
-	required: 'Generic type alias should be wrapped into infer-based conditional type.',
-	elseBranchMustReturnNever: 'The else branch must return never keyword.',
-	tupleMustIncludeAllParameters: 'The tuple type must include all generic type parameters.',
-	tupleOrderMustMatchGenericParameters: 'The order of the tuple type must match the order of generic type parameters.',
-	tupleMustNotContainNonGenericTypes: 'The tuple type must not contain elements other than generic type parameters.',
-	tupleMustNotContainDuplicateGenericTypes: 'The tuple type should not contain repeated parameters of the generic type.',
-	tuplePatternMustInferAllGenericTypeParameters: 'The tuple pattern must cover all generic type parameters and infer each of them.',
+	required: 'Generic type alias should be wrapped into conditional type.',
+	elseNever: 'The else branch must return never keyword.',
+	tupleAllParams: 'The tuple type must include all generic type parameters.',
+	tupleOrder: 'The order of the tuple type must match the order of generic type parameters.',
+	tupleOnlyParams: 'The tuple type must not contain elements other than generic type parameters.',
+	tupleUniqueParams: 'The tuple type should not contain repeated parameters of the generic type.',
+	pattern: 'The extends tuple pattern must cover all generic type parameters, and each corresponding element must be {{type}}',
 })
 
-const rule = createRule<[Options], Message>({
+const rule = createRule<Options[], Message>({
 	name: 'inferization-type',
 	meta: {
 		type: 'suggestion',
 		fixable: 'code',
 		schema: [Options],
 		messages: Message,
-		docs: { description: 'Wrap generic type aliases into infer-based conditional type.' },
+		docs: { description: 'Wrap generic type aliases into conditional type.' },
 	},
 
 	create(context) {
 		const report = CreateReporter(context, Message)
-		const userOptions = context.options[0] as undefined | Options
-		const defaultOptions: Options = {
-			enforceElseBranchMustReturnNever: userOptions?.enforceElseBranchMustReturnNever ?? true,
-			enforceTupleOrderMustMatchGenericParameters: userOptions?.enforceTupleOrderMustMatchGenericParameters ?? true,
-			enforceTupleMustNotContainNonGenericTypes: userOptions?.enforceTupleMustNotContainNonGenericTypes ?? true,
-			enforceTupleMustNotContainDuplicateGenericTypes: userOptions?.enforceTupleMustNotContainNonGenericTypes ?? true,
-		}
+		const userOptions = context.options[0]
+		const defaultOptions = {
+			enforceElseNever: userOptions?.enforceElseNever ?? true,
+			enforceTupleOrder: userOptions?.enforceTupleOrder ?? true,
+			enforceOnlyParams: userOptions?.enforceOnlyParams ?? true,
+			enforceUniqueParams: userOptions?.enforceUniqueParams ?? true,
+			enforcePattern: {
+				enable: userOptions?.enforcePattern?.enable ?? true,
+				// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+				type: (userOptions?.enforcePattern?.type || 'unknown') as 'any' | 'unknown',
+			},
+		} satisfies Required<Options>
 
 		return {
 			TSTypeAliasDeclaration(node) {
-				const parametersNode = node.typeParameters
-				if (!parametersNode || !parametersNode.params.length) return
+				const paramsNode = node.typeParameters
+				if (!paramsNode || !paramsNode.params.length) return
 
-				const conditionNode = testConditionType(node.typeAnnotation)
-				if (conditionNode.status === 'error') return report({
+				const patternType = defaultOptions.enforcePattern.type
+
+				const condition = testCondition(node.typeAnnotation)
+				if (condition.status === 'error') return report({
 					node: node.typeAnnotation,
 					message: 'required',
 					messageData: null,
-					fixed: fixRequired(context, parametersNode, node.typeAnnotation),
+					fixed: fixRequired(context, paramsNode, node.typeAnnotation, patternType),
 				})
 
-				const tuples = extractTupleFromConditionalNodes(conditionNode.data)
+				const tuples = extractTuples(condition.data)
 				if (tuples.status === 'error') return report({
 					node: node.typeAnnotation,
 					message: 'required',
 					messageData: null,
-					fixed: fixRequired(context, parametersNode, node.typeAnnotation),
+					fixed: fixRequired(context, paramsNode, node.typeAnnotation, patternType),
 				})
 
-				const checkTupleIncludeAllParameters = testTupleIncludeAllParameters(parametersNode, tuples.data.checkTupleNode)
-				if (checkTupleIncludeAllParameters.status === 'error') report({
-					node: tuples.data.checkTupleNode,
-					message: 'tupleMustIncludeAllParameters',
+				const hasAllParams = testAllParams(paramsNode, tuples.data.checkTuple)
+				if (hasAllParams.status === 'error') report({
+					node: tuples.data.checkTuple,
+					message: 'tupleAllParams',
 					messageData: null,
 				})
 
-				const extendsTypleMustInferAllGenericTypeParameters = testPatternMustInferAllGenericTypeParameters(tuples.data.checkTupleNode, tuples.data.extendsTupleNode)
-				if (extendsTypleMustInferAllGenericTypeParameters.status === 'error') report({
-					node: tuples.data.extendsTupleNode,
-					message: 'tuplePatternMustInferAllGenericTypeParameters',
-					messageData: null,
+				const patternIsValid = testPattern(tuples.data.checkTuple, tuples.data.extendsTuple, patternType)
+				if (defaultOptions.enforcePattern.enable && patternIsValid.status === 'error') report({
+					node: tuples.data.extendsTuple,
+					message: 'pattern',
+					messageData: {
+						type: patternType,
+					},
 				})
 
-				if (defaultOptions.enforceTupleMustNotContainDuplicateGenericTypes) {
-					const checkTupleNotContainDublicateGenericTypes = testTupleMustNotContainDuplicateGenericTypes(parametersNode, tuples.data.checkTupleNode)
-					if (checkTupleNotContainDublicateGenericTypes.status === 'error') checkTupleNotContainDublicateGenericTypes.data.forEach((node) => {
+				if (defaultOptions.enforceUniqueParams) {
+					const hasDuplicates = testUniqueParams(paramsNode, tuples.data.checkTuple)
+					if (hasDuplicates.status === 'error') hasDuplicates.data.forEach((node) => {
 						report({
 							node: node,
-							message: 'tupleMustNotContainDuplicateGenericTypes',
+							message: 'tupleUniqueParams',
 							messageData: null,
 						})
 					})
 				}
 
-				if (defaultOptions.enforceTupleOrderMustMatchGenericParameters) {
-					const checkTupleOrderMustMatchGenericParameters = testOrderMustMatchGenericParameters(parametersNode, tuples.data.checkTupleNode)
-					if (checkTupleOrderMustMatchGenericParameters.status === 'error') checkTupleOrderMustMatchGenericParameters.data.forEach((node) => {
+				if (defaultOptions.enforceTupleOrder) {
+					const orderMatches = testTupleOrder(paramsNode, tuples.data.checkTuple)
+					if (orderMatches.status === 'error') orderMatches.data.forEach((node) => {
 						report({
 							node: node,
-							message: 'tupleOrderMustMatchGenericParameters',
+							message: 'tupleOrder',
 							messageData: null,
 						})
 					})
 				}
 
-				if (defaultOptions.enforceTupleMustNotContainNonGenericTypes) {
-					const checkTupleNotContainNonGenericTypes = testNotContainNonGenericTypes(parametersNode, tuples.data.checkTupleNode)
-					if (checkTupleNotContainNonGenericTypes.status === 'error') checkTupleNotContainNonGenericTypes.data.forEach((node) => {
+				if (defaultOptions.enforceOnlyParams) {
+					const onlyParams = testOnlyParams(paramsNode, tuples.data.checkTuple)
+					if (onlyParams.status === 'error') onlyParams.data.forEach((node) => {
 						report({
 							node: node,
-							message: 'tupleMustNotContainNonGenericTypes',
+							message: 'tupleOnlyParams',
 							messageData: null,
 						})
 					})
 				}
 
-				if (defaultOptions.enforceElseBranchMustReturnNever) {
-					const conditionalBranchElseReturnNever = testConditionElseBranchReturnNever(conditionNode.data)
-					if (conditionalBranchElseReturnNever.status === 'error') report({
-						node: conditionNode.data.falseType,
-						message: 'elseBranchMustReturnNever',
+				if (defaultOptions.enforceElseNever) {
+					const elseIsNever = testElseNever(condition.data)
+					if (elseIsNever.status === 'error') report({
+						node: condition.data.falseType,
+						message: 'elseNever',
 						messageData: null,
 					})
 				}
