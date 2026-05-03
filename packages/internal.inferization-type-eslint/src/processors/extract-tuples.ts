@@ -1,13 +1,13 @@
 import { Result } from '../utils/result'
 import { AST_NODE_TYPES, TSESTree } from '@typescript-eslint/utils'
 
-export function extractTupleFromConditionalNodes(
+export function extractTuples(
 	node: TSESTree.TSConditionalType,
 ): (
 	Result<'error', null, null> |
 	Result<'ok', null, {
-		checkTupleNode: TSESTree.TSTupleType
-		extendsTupleNode: TSESTree.TSTupleType
+		checkTuple: TSESTree.TSTupleType
+		extendsTuple: TSESTree.TSTupleType
 	}>
 ) {
 	const checkNode = node.checkType
@@ -19,7 +19,7 @@ export function extractTupleFromConditionalNodes(
 	if (!extendsNodeIsTuple) return Result('error')
 
 	return Result('ok', null, {
-		checkTupleNode: checkNode,
-		extendsTupleNode: extendsNode,
+		checkTuple: checkNode,
+		extendsTuple: extendsNode,
 	})
 }

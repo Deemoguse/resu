@@ -28,26 +28,17 @@ export function fixRequired(
 	context: RuleContext<string, any>,
 	parametersNode: TSESTree.TSTypeParameterDeclaration,
 	annotationNode: TSESTree.TypeNode,
+	patternType: 'any' | 'unknown',
 ): (
 	TSESLint.ReportFixFunction
 ) {
 	const parameterNames = parametersNode.params.map((node) => node.name.name)
 	const annotationNodeSourceCode = context.sourceCode.getText(annotationNode)
 
-	let result = annotationNodeSourceCode
-	for (const parameterName of parameterNames) {
-		const nameRegexp = new RegExp(`\\b${parameterName}(?!\\.)\\b`, 'g')
-		result = result.replace(nameRegexp, `_${parameterName}`)
-	}
-
-	const extendsTupleElements = parametersNode.params.map((node) => {
-		const left = `infer _${node.name.name}`
-		const right = node.constraint ? ` extends ${node.name.name}` : ''
-		return left + right
-	})
+	const extendsTupleElements = Array(parametersNode.params.length).fill(patternType)
 
 	const fixedCode = `[${parameterNames.join(', ')}] extends [${extendsTupleElements.join(',')}]`
-	const multilineFixedCode = `${fixedCode}\n` + `? ${result}\n` + ': never'
+	const multilineFixedCode = `${fixedCode}\n` + `? ${annotationNodeSourceCode}\n` + ': never'
 
 	const disableLineComment = context.sourceCode
 		.getCommentsAfter(annotationNode)
@@ -58,14 +49,14 @@ export function fixRequired(
 		.find((comment) => testPreviousLineDisableDirective(annotationNode, comment))
 
 	return (fixer) => {
-		if (disableLineComment) fixer.replaceTextRange(
+		if (disableLineComment) return fixer.replaceTextRange(
 			[annotationNode.range[0], disableLineComment.range[1]],
-			`${fixedCode}\n` + `? ${result} ${context.sourceCode.getText(disableLineComment)}\n` + ': never',
+			`${fixedCode}\n` + `? ${annotationNodeSourceCode} ${context.sourceCode.getText(disableLineComment)}\n` + ': never',
 		)
 
-		if (disableNextLineComment) fixer.replaceTextRange(
+		if (disableNextLineComment) return fixer.replaceTextRange(
 			[disableNextLineComment.range[0], annotationNode.range[1]],
-			`${fixedCode}\n` + `${context.sourceCode.getText(disableNextLineComment)}\n` + `? ${result}\n` + ': never',
+			`${fixedCode}\n` + `${context.sourceCode.getText(disableNextLineComment)}\n` + `? ${annotationNodeSourceCode}\n` + ': never',
 		)
 
 		return fixer.replaceText(annotationNode, multilineFixedCode)

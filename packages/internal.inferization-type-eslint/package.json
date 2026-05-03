@@ -15,9 +15,10 @@
 		}
 	},
 	"scripts": {
-		"build": "tsdown --config .tsdown.config.ts",
-		"dev": "tsdown --config .tsdown.config.ts --watch",
-		"lint": "eslint --config .eslint.config.ts --fix"
+		"build": "tsdown",
+		"dev": "tsdown --watch",
+		"lint": "eslint lint",
+		"lint-fix": "npm run lint -- --fix"
 	},
 	"dependencies": {
 		"@typescript-eslint/utils": "^8.59.1",
