@@ -16,18 +16,28 @@ export function createConfig (...args) {
 	return defineConfig([
 		{
 			ignores: [
-				'dist/**/*'
+				'dist/**/*',
+				'eslint.config.ts',
 			]
 		},
 
-		eslintJS.configs.recommended,
-		eslintTS.configs.strict,
 		eslintStylistic.configs.recommended,
-
+		eslintJS.configs.recommended,
+		eslintTS.configs.strictTypeChecked,
 		{
+			languageOptions: {
+				parserOptions: {
+					projectService: true,
+				},
+				globals: {
+					...globals.browser,
+					...globals.node,
+				}
+			},
 			rules: {
 				'@typescript-eslint/no-namespace': 'off',
 				'@typescript-eslint/no-explicit-any': 'off',
+				'@typescript-eslint/no-confusing-void-expression': 'off',
 			}
 		},
 

@@ -1,0 +1,32 @@
+{
+	"private": true,
+	"type": "module",
+	"name": "@internal/inferization-type-eslint",
+	"version": "1.0.0",
+	"files": ["dist"],
+	"exports": {
+		"import": {
+			"types": "./dist/es/index.d.mts",
+			"default": "./dist/es/index.mjs"
+		},
+		"default": {
+			"types": "./dist/es/index.d.mts",
+			"default": "./dist/es/index.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown --config .tsdown.config.ts",
+		"dev": "tsdown --config .tsdown.config.ts --watch",
+		"lint": "eslint --config .eslint.config.ts --fix"
+	},
+	"dependencies": {
+		"@typescript-eslint/utils": "^8.59.1",
+		"json-schema-to-ts": "^3.1.1"
+	},
+	"devDependencies": {
+		"@internal/configs": "1.0.0",
+		"eslint": "^10.2.1",
+		"tsdown": "^0.21.10",
+		"typescript": "^6.0.3"
+	}
+}
