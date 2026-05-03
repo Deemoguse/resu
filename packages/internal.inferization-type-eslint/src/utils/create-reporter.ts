@@ -1,4 +1,5 @@
 import type { TSESTree } from '@typescript-eslint/utils'
+import type { TSESLint } from '@typescript-eslint/utils'
 import type { RuleContext } from '@typescript-eslint/utils/ts-eslint'
 
 export type CreateReporter<
@@ -9,7 +10,7 @@ export type CreateReporter<
 	node: TSESTree.Node
 	message: I
 	messageData: M[I]
-	fixed?: string
+	fixed?: string | TSESLint.ReportFixFunction
 }) => (
 	void
 )
@@ -27,8 +28,8 @@ export function CreateReporter<
 		messageId: params.message as string,
 		node: params.node,
 		data: params.messageData || {},
-		fix: params.fixed !== undefined
+		fix: typeof params.fixed === 'string'
 			? (fixer) => fixer.replaceText(params.node, params.fixed as string)
-			: undefined,
+			: params.fixed,
 	})
 }

@@ -10,6 +10,7 @@ import { testOrderMustMatchGenericParameters } from './processors/test-order-mus
 import { testNotContainNonGenericTypes } from './processors/test-not-contain-non-generic-types'
 import { testTupleMustNotContainDuplicateGenericTypes } from './processors/test-tuple-must-not-contain-duplicate-generic-types'
 import { testPatternMustInferAllGenericTypeParameters } from './processors/test-pattern-must-infer-all-generic-type-parameters'
+import { fixRequired } from './fixers/fix-required'
 import type { ConfigObject, RuleDefinition } from '@eslint/core'
 
 type Options = typeof Options.InferType
@@ -62,16 +63,18 @@ const rule = createRule<[Options], Message>({
 
 				const conditionNode = testConditionType(node.typeAnnotation)
 				if (conditionNode.status === 'error') return report({
-					node: node,
+					node: node.typeAnnotation,
 					message: 'required',
 					messageData: null,
+					fixed: fixRequired(context, parametersNode, node.typeAnnotation),
 				})
 
 				const tuples = extractTupleFromConditionalNodes(conditionNode.data)
 				if (tuples.status === 'error') return report({
-					node: node,
+					node: node.typeAnnotation,
 					message: 'required',
 					messageData: null,
+					fixed: fixRequired(context, parametersNode, node.typeAnnotation),
 				})
 
 				const checkTupleIncludeAllParameters = testTupleIncludeAllParameters(parametersNode, tuples.data.checkTupleNode)
