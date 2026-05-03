@@ -13,22 +13,27 @@ export namespace ResultFromUnlessWith {
 		V,
 		T extends Result.Tag = never,
 	> =
-		S extends 'ok'
-			? V extends ResultAnyError ? V : ResultOkFrom<V, T>
-			: V extends ResultAnyOk ? V : ResultErrorFrom<V, T>
+		[S, V, T] extends [unknown, unknown, unknown]
+			? S extends 'ok'
+				? V extends ResultAnyError ? V : ResultOkFrom<V, T>
+				: V extends ResultAnyOk ? V : ResultErrorFrom<V, T>
+			: never
 }
 
 export type ResultFromUnlessWith<
 	S extends Result.Status,
-> = <
-	V,
-	T extends Result.Tag,
-> (
-	value: NonUndefined<V>,
-	tag?: T,
-) => (
-	ResultFromUnlessWith.Return<S, V, T>
-)
+> =
+	[S] extends [unknown]
+		? <
+			V,
+			T extends Result.Tag,
+		> (
+			value: NonUndefined<V>,
+			tag?: T,
+		) => (
+			ResultFromUnlessWith.Return<S, V, T>
+		)
+		: never
 
 export function ResultFromUnlessWith<
 	S extends Result.Status,

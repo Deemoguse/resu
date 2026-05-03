@@ -5,6 +5,8 @@ export type ResultOkFromUnlessError<
 	V,
 	T extends Result.Tag,
 > =
-	ResultFromUnlessWith.Return<'ok', V, T>
+	[V, T] extends [unknown, unknown]
+		? ResultFromUnlessWith.Return<'ok', V, T>
+		: never
 
 export const ResultOkFromUnlessError: ResultFromUnlessWith<'ok'> = ResultFromUnlessWith('ok')

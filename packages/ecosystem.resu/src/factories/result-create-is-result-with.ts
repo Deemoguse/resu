@@ -8,19 +8,21 @@ export declare namespace IsResultWith {
 		S extends 'any' | Result.Status,
 		V,
 	> =
-		S extends 'any'
-			? V extends ResultAny ? true : false
-			: S extends 'ok'
-				? V extends ResultAnyOk ? true : false
-				: V extends ResultAnyError ? true : false
+		[S, V] extends [unknown, unknown]
+			? S extends 'any'
+				? V extends ResultAny ? true : false
+				: S extends 'ok'
+					? V extends ResultAnyOk ? true : false
+					: V extends ResultAnyError ? true : false
+			: never
 }
 
 export type IsResultWith<
 	S extends 'any' | Result.Status,
-> = (
-	value: unknown,
-) =>
-	value is S extends 'ok' ? ResultAnyOk : ResultAnyError
+> =
+	[S] extends [unknown]
+		? (value: unknown) => value is S extends 'ok' ? ResultAnyOk : ResultAnyError
+		: never
 
 export function IsResultWith<S extends 'any' | Result.Status>(status: S): IsResultWith<S> {
 	return (value): value is S extends 'ok' ? ResultAnyOk : ResultAnyError => {

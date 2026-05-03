@@ -5,6 +5,8 @@ export type ResultErrorFrom<
 	V,
 	T extends Result.Tag,
 > =
-	ResultFromWith.Return<'error', V, T>
+	[V, T] extends [unknown, unknown]
+		? ResultFromWith.Return<'error', V, T>
+		: never
 
 export const ResultErrorFrom: ResultFromWith<'error'> = ResultFromWith('error')

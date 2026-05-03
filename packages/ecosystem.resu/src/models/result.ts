@@ -12,11 +12,14 @@ export namespace Result {
 		S extends Result.Status,
 		T extends Result.Tag,
 		D,
-	> = {
-		status: S
-		tag?: NonUndefined<T>
-		data?: NonUndefined<D>
-	}
+	> =
+		[S, T, D] extends [unknown, unknown, unknown]
+			? {
+				status: S
+				tag?: NonUndefined<T>
+				data?: NonUndefined<D>
+			}
+			: never
 }
 
 export class Result<
@@ -33,6 +36,6 @@ export class Result<
 		this.tag = (params.tag ?? null) as NonUndefined<T>
 		this.data = (params.data ?? null) as NonUndefined<D>
 
-		return Object.freeze(this) as unknown as Result<S, T, D>
+		return Object.freeze(this)
 	}
 }
