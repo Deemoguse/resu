@@ -4,7 +4,7 @@
 	"name": "@internal/configs",
 	"version": "1.0.0",
 	"exports": {
-		"./base/ts": "./base/ts.config.json",
+		"./base/ts": "./base/tsconfig.json",
 		"./base/eslint": "./base/eslint.config.js",
 		"./base/tsdown": "./base/tsdown.config.js"
 	},

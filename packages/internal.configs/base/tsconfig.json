@@ -15,6 +15,7 @@
 		"isolatedDeclarations": true,
 		"verbatimModuleSyntax": true,
 		"erasableSyntaxOnly": true,
+		"noUncheckedIndexedAccess": true,
 
 		"baseUrl": "${configDir}",
 		"paths": { "@/*": ["./*"]}
