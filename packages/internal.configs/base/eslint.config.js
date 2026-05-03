@@ -29,6 +29,10 @@ export function createConfig (...args) {
 				parserOptions: {
 					projectService: true,
 				},
+				globals: {
+					...globals.browser,
+					...globals.node,
+				}
 			},
 			rules: {
 				'@typescript-eslint/no-namespace': 'off',
