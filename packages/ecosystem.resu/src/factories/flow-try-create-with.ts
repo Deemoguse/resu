@@ -31,17 +31,15 @@ export namespace FlowTryCreateWith {
 		S extends boolean = false,
 	> =
 		[T, C, S] extends [unknown, unknown, unknown]
-			? [T, C, S] extends unknown
-				? S extends true ? {
-					signal: AbortSignal
-					try: (signal: AbortSignal) => NonUndefined<T> | Promise<NonUndefined<T>>
-					catch?: (error: unknown) => NonUndefined<C> | Promise<NonUndefined<C>>
-				} : {
-					signal?: AbortSignal
-					try: () => NonUndefined<T> | Promise<NonUndefined<T>>
-					catch?: (error: unknown) => NonUndefined<C> | Promise<NonUndefined<C>>
-				}
-				: never
+			? S extends true ? {
+				signal: AbortSignal
+				try: (signal: AbortSignal) => NonUndefined<T> | Promise<NonUndefined<T>>
+				catch?: (error: unknown) => NonUndefined<C> | Promise<NonUndefined<C>>
+			} : {
+				signal?: AbortSignal
+				try: () => NonUndefined<T> | Promise<NonUndefined<T>>
+				catch?: (error: unknown) => NonUndefined<C> | Promise<NonUndefined<C>>
+			}
 			: never
 
 	export type Operations = (() => unknown) & {
