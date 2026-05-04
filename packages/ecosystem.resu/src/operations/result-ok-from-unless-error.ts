@@ -3,7 +3,7 @@ import type { Result } from '../models/result'
 
 export type ResultOkFromUnlessError<
 	V,
-	T extends Result.Tag,
+	T extends Result.Tag = never,
 > =
 	[V, T] extends [unknown, unknown]
 		? ResultFromUnlessWith.Return<'ok', V, T>
