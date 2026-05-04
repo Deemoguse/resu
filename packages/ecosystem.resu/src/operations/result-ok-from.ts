@@ -5,6 +5,8 @@ export type ResultOkFrom<
 	V,
 	T extends Result.Tag,
 > =
-	ResultFromWith.Return<'ok', V, T>
+	[V, T] extends [unknown, unknown]
+		? ResultFromWith.Return<'ok', V, T>
+		: never
 
 export const ResultOkFrom: ResultFromWith<'ok'> = ResultFromWith('ok')

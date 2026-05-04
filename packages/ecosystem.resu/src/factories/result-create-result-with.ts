@@ -5,23 +5,29 @@ export declare namespace ResultWith {
 	export type Param<
 		T extends Result.Tag,
 		D,
-	> = {
-		tag?: NonUndefined<T>
-		data?: NonUndefined<D>
-		log?: boolean
-	}
+	> =
+		[T, D] extends [unknown, unknown]
+			? {
+				tag?: NonUndefined<T>
+				data?: NonUndefined<D>
+				log?: boolean
+			}
+			: never
 }
 
 export type ResultWith<
 	S extends Result.Status,
-> = <
-	T extends Result.Tag = null,
-	D = null,
-> (
-	params?: ResultWith.Param<T, D>,
-) => (
-	Result<S, T, D>
-)
+> =
+	[S] extends [unknown]
+		? <
+			T extends Result.Tag = null,
+			D = null,
+		> (
+			params?: ResultWith.Param<T, D>,
+		) => (
+			Result<S, T, D>
+		)
+		: never
 
 export function ResultWith<S extends Result.Status>(status: S): ResultWith<S> {
 	return (params) => new Result({ status, ...params })

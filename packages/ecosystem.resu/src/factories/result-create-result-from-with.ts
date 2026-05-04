@@ -10,22 +10,27 @@ export namespace ResultFromWith {
 		V,
 		T extends Result.Tag = never,
 	> =
-		V extends Result<Result.Status, infer T1, infer V1>
-			? Result<S, [T] extends [never] ? T1 : T, V1>
-			: Result<S, [T] extends [never] ? null : T, V>
+		[S, V, T] extends [unknown, unknown, unknown]
+			? V extends Result<Result.Status, infer T1, infer V1>
+				? Result<S, [T] extends [never] ? T1 : T, V1>
+				: Result<S, [T] extends [never] ? null : T, V>
+			: never
 }
 
 export type ResultFromWith<
 	S extends Result.Status,
-> = <
-	V,
-	T extends Result.Tag = never,
-> (
-	value: NonUndefined<V>,
-	tag?: T,
-) => (
-	ResultFromWith.Return<S, V, T>
-)
+> =
+	[S] extends [unknown]
+		? <
+			V,
+			T extends Result.Tag = never,
+		> (
+			value: NonUndefined<V>,
+			tag?: T,
+		) => (
+			ResultFromWith.Return<S, V, T>
+		)
+		: never
 
 export function ResultFromWith<
 	S extends Result.Status,
