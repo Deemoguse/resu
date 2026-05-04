@@ -57,9 +57,9 @@ export type FlowTryCreateWith<
 			<T, C = never> (operation: FlowTryCreateWith.SyncBranches<T, C>): FlowTryCreateWith.Return<T, C>
 			<T> (operation: () => NonUndefined<T>): FlowTryCreateWith.Return<T>
 		} : {
-			<T, C = never> (operation: FlowTryCreateWith.AsyncBranches<T, C, true>): FlowTryCreateWith.Return<T, C, true>
-			<T, C = never> (operation: FlowTryCreateWith.AsyncBranches<T, C>): FlowTryCreateWith.Return<T, C>
-			<T> (operation: () => Promise<NonUndefined<T>>): FlowTryCreateWith.Return<T>
+			<T, C = never> (operation: FlowTryCreateWith.AsyncBranches<T, C, true>): Promise<FlowTryCreateWith.Return<T, C, true>>
+			<T, C = never> (operation: FlowTryCreateWith.AsyncBranches<T, C>): Promise<FlowTryCreateWith.Return<T, C>>
+			<T> (operation: () => NonUndefined<T> | Promise<NonUndefined<T>>): Promise<FlowTryCreateWith.Return<T>>
 		}
 		: never
 
