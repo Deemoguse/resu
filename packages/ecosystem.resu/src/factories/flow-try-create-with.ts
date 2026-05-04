@@ -1,6 +1,6 @@
 import { AbortError } from '../errors/abort-error'
 import { RuntimeError } from '../errors/runtime-error'
-import { OkFromUnlessError } from '../namespaces/result'
+import { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 import type { ResultAny } from '../operations/result-any'
 import type { NonUndefined } from '../types/non-undefined'
 
@@ -11,7 +11,7 @@ export namespace FlowTryCreateWith {
 		S extends boolean = false,
 	> =
 		[T, C, S] extends [unknown, unknown, unknown]
-			? RuntimeError | (S extends true ? AbortError : never) | OkFromUnlessError<T | C>
+			? RuntimeError | (S extends true ? AbortError : never) | ResultOkFromUnlessError<T | C>
 			: never
 
 	export type SyncBranches<
@@ -57,9 +57,9 @@ export type FlowTryCreateWith<
 			<T, C = never> (operation: FlowTryCreateWith.SyncBranches<T, C>): FlowTryCreateWith.Return<T, C>
 			<T> (operation: () => NonUndefined<T>): FlowTryCreateWith.Return<T>
 		} : {
-			<T, C = never> (operation: FlowTryCreateWith.AsyncBranches<T, C, true>): FlowTryCreateWith.Return<T, C, true>
-			<T, C = never> (operation: FlowTryCreateWith.AsyncBranches<T, C>): FlowTryCreateWith.Return<T, C>
-			<T> (operation: () => Promise<NonUndefined<T>>): FlowTryCreateWith.Return<T>
+			<T, C = never> (operation: FlowTryCreateWith.AsyncBranches<T, C, true>): Promise<FlowTryCreateWith.Return<T, C, true>>
+			<T, C = never> (operation: FlowTryCreateWith.AsyncBranches<T, C>): Promise<FlowTryCreateWith.Return<T, C>>
+			<T> (operation: () => NonUndefined<T> | Promise<NonUndefined<T>>): Promise<FlowTryCreateWith.Return<T>>
 		}
 		: never
 
@@ -70,9 +70,9 @@ export function FlowTryCreateWith<M extends 'sync' | 'async'>(mode: M): FlowTryC
 		const signal = operation.signal
 
 		if (mode === 'sync') {
-			try { return OkFromUnlessError(tryFn()) }
+			try { return ResultOkFromUnlessError(tryFn()) }
 			catch (error) {
-				try { return OkFromUnlessError(catchFn(error)) }
+				try { return ResultOkFromUnlessError(catchFn(error)) }
 				catch (error) { return RuntimeError(error) }
 			}
 		}
@@ -100,7 +100,7 @@ export function FlowTryCreateWith<M extends 'sync' | 'async'>(mode: M): FlowTryC
 async function promiseResultWrap(value: unknown): Promise<ResultAny> {
 	try {
 		const res = await Promise.resolve(value)
-		return OkFromUnlessError(res) as ResultAny
+		return ResultOkFromUnlessError(res) as ResultAny
 	}
 	catch (error) {
 		return RuntimeError(error) as ResultAny
