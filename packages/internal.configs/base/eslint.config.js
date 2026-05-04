@@ -43,6 +43,7 @@ export function createConfig (...args) {
 
 		{
 			rules: {
+				'@stylistic/max-statements-per-line': ['error', { "max": 3 }],
 				'@stylistic/no-multi-spaces': 'off',
 				'@stylistic/no-tabs': 'off',
 				'@stylistic/indent': ['error', 'tab'],
