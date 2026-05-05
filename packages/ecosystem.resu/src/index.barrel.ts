@@ -13,3 +13,5 @@ export type { ResultAnyError } from './operations/result-any-error'
 
 export { FlowTrySync } from './operations/flow-try-sync'
 export { FlowTryAsync } from './operations/flow-try-async'
+export { FlowFunctionSync } from './operations/flow-function-sync'
+export { FlowFunctionAsync } from './operations/flow-function-async'
