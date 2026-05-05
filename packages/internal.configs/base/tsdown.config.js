@@ -4,54 +4,35 @@ import path from 'path'
 import { defineConfig, mergeConfig } from 'tsdown'
 
 /** @import { UserConfig } from 'tsdown' */
-/** @import { NormalizedFormat } from 'tsdown' */
-
-/** @typedef {UserConfig | ((format: NormalizedFormat) => UserConfig)} Override */
+/** @import { InlineConfig } from 'tsdown' */
 
 /**
- * @param {Override} [override]
- * @returns {UserConfig[]}
+ * @param {InlineConfig} [override]
+ * @returns {UserConfig}
  */
 export function createConfig (override) {
-	return defineConfig([
-		configWithFormat('es', override),
-		configWithFormat('cjs', override),
-	])
+	const config = defineConfig({
+		entry: fromRoot('./src/index.ts'),
+		outDir: fromRoot(`./dist/`),
+
+		alias: {
+			'@': fromRoot('./src/index.ts')
+		},
+		format: ['cjs', 'es'],
+
+		dts: true,
+		minify: true,
+		sourcemap: true,
+		exports: true,
+	})
+
+	return override ? mergeConfig(config, override) : config
 }
 
 /**
  * @param {string} relative
  * @returns {string}
  */
-function fromRoot (relative) {
-	return path.resolve(process.cwd(), relative)
-}
-
-/**
- * @param {NormalizedFormat} format
- * @param {Override} [override]
- * @returns {UserConfig}
- */
-function configWithFormat (format, override) {
-	const resolvedOverrideConfig = typeof override === 'function'
-		? override(format)
-		: override
-
-	/** @type { UserConfig } */
-	const config = {
-		entry: fromRoot('./src/index.ts'),
-		outDir: fromRoot(`./dist/${format}`),
-
-		format: format,
-
-		dts: true,
-		sourcemap: true,
-		alias: {
-			'@': fromRoot('./src/index.ts')
-		},
-	}
-
-	return resolvedOverrideConfig
-		? mergeConfig(config, resolvedOverrideConfig)
-		: config
+export function fromRoot (relative, root = process.cwd()) {
+	return path.resolve(root, relative)
 }

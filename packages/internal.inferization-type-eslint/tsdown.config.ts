@@ -1,2 +1,7 @@
 import { createConfig } from '@internal/configs/base/tsdown'
-export default createConfig()
+
+export default createConfig({
+	deps: {
+		onlyBundle: false
+	}
+})
