@@ -14,9 +14,69 @@
 			"import": "./dist/index.mjs",
 			"require": "./dist/index.cjs"
 		},
-		"./barrel": {
-			"import": "./dist/barrel.mjs",
-			"require": "./dist/barrel.cjs"
+		"./flow-function-async": {
+			"import": "./dist/flow-function-async.mjs",
+			"require": "./dist/flow-function-async.cjs"
+		},
+		"./flow-function-sync": {
+			"import": "./dist/flow-function-sync.mjs",
+			"require": "./dist/flow-function-sync.cjs"
+		},
+		"./flow-try-async": {
+			"import": "./dist/flow-try-async.mjs",
+			"require": "./dist/flow-try-async.cjs"
+		},
+		"./flow-try-sync": {
+			"import": "./dist/flow-try-sync.mjs",
+			"require": "./dist/flow-try-sync.cjs"
+		},
+		"./result-any": {
+			"import": "./dist/result-any.mjs",
+			"require": "./dist/result-any.cjs"
+		},
+		"./result-any-error": {
+			"import": "./dist/result-any-error.mjs",
+			"require": "./dist/result-any-error.cjs"
+		},
+		"./result-any-ok": {
+			"import": "./dist/result-any-ok.mjs",
+			"require": "./dist/result-any-ok.cjs"
+		},
+		"./result-error": {
+			"import": "./dist/result-error.mjs",
+			"require": "./dist/result-error.cjs"
+		},
+		"./result-error-from": {
+			"import": "./dist/result-error-from.mjs",
+			"require": "./dist/result-error-from.cjs"
+		},
+		"./result-error-from-unless-ok": {
+			"import": "./dist/result-error-from-unless-ok.mjs",
+			"require": "./dist/result-error-from-unless-ok.cjs"
+		},
+		"./result-is-any": {
+			"import": "./dist/result-is-any.mjs",
+			"require": "./dist/result-is-any.cjs"
+		},
+		"./result-is-error": {
+			"import": "./dist/result-is-error.mjs",
+			"require": "./dist/result-is-error.cjs"
+		},
+		"./result-is-ok": {
+			"import": "./dist/result-is-ok.mjs",
+			"require": "./dist/result-is-ok.cjs"
+		},
+		"./result-ok": {
+			"import": "./dist/result-ok.mjs",
+			"require": "./dist/result-ok.cjs"
+		},
+		"./result-ok-from": {
+			"import": "./dist/result-ok-from.mjs",
+			"require": "./dist/result-ok-from.cjs"
+		},
+		"./result-ok-from-unless-error": {
+			"import": "./dist/result-ok-from-unless-error.mjs",
+			"require": "./dist/result-ok-from-unless-error.cjs"
 		},
 		"./package.json": "./package.json"
 	},
