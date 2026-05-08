@@ -1,11 +1,11 @@
-import { FlowFunctionCreateWith } from '../factories/flow-function-create-with'
+import { FlowFunctionWith } from '../factories/flow-function-create-with'
 
 export type FlowFunctionAsync<
 	A extends unknown[],
 	R,
 > =
 	[A, R] extends [unknown, unknown]
-		? FlowFunctionCreateWith.Return<'async', A, R>
+		? FlowFunctionWith.Return<'async', A, R>
 		: never
 
-export const FlowFunctionAsync: FlowFunctionCreateWith<'async'> = FlowFunctionCreateWith('async')
+export const FlowFunctionAsync: FlowFunctionWith<'async'> = FlowFunctionWith('async')
