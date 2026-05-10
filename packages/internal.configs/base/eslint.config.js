@@ -42,6 +42,7 @@ export function createConfig (...args) {
 
 		{
 			rules: {
+				'@stylistic/brace-style': 'off',
 				'@stylistic/max-statements-per-line': ['error', { "max": 3 }],
 				'@stylistic/no-multi-spaces': 'off',
 				'@stylistic/no-tabs': 'off',
