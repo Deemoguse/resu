@@ -1,5 +1,5 @@
 import { ResultFromWith } from '../factories/result-create-result-from-with'
-import type { Result } from '../models/result'
+import type { Result } from '../classes/result'
 
 export type ResultOkFrom<
 	V,

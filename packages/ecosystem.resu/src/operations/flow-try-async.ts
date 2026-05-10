@@ -1,4 +1,4 @@
-import { FlowTryCreateWith } from '../factories/flow-try-create-with'
+import { FlowTryWith } from '../factories/flow-try-create-with'
 
 export type FlowTryAsync<
 	T,
@@ -6,7 +6,7 @@ export type FlowTryAsync<
 	S extends boolean = false,
 > =
 	[T, C, S] extends [unknown, unknown, unknown]
-		? Promise<FlowTryCreateWith.Return<T, C, S>>
+		? Promise<FlowTryWith.Return<T, C, S>>
 		: never
 
-export const FlowTryAsync: FlowTryCreateWith<'async'> = FlowTryCreateWith('async')
+export const FlowTryAsync: FlowTryWith<'async'> = FlowTryWith('async')

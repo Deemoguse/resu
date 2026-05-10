@@ -1,4 +1,4 @@
-import { InternalCreateErrorWith } from '../factories/internal-create-error-with'
+import { InternalErrorWith } from '../factories/internal-create-error-with'
 
-export type RuntimeError<D = unknown> = [D] extends [unknown] ? InternalCreateErrorWith.Return<'RuntimeError', D> : never
-export const RuntimeError: InternalCreateErrorWith<'RuntimeError'> = InternalCreateErrorWith('RuntimeError')
+export type RuntimeError<D = unknown> = [D] extends [unknown] ? InternalErrorWith.Return<'RuntimeError', D> : never
+export const RuntimeError: InternalErrorWith<'RuntimeError'> = InternalErrorWith('RuntimeError')

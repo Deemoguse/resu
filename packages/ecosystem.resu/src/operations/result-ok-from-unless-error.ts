@@ -1,5 +1,5 @@
 import { ResultFromUnlessWith } from '../factories/result-create-result-from-unless-with'
-import type { Result } from '../models/result'
+import type { Result } from '../classes/result'
 
 export type ResultOkFromUnlessError<
 	V,

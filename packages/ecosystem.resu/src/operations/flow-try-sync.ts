@@ -1,11 +1,11 @@
-import { FlowTryCreateWith } from '../factories/flow-try-create-with'
+import { FlowTryWith } from '../factories/flow-try-create-with'
 
 export type FlowTrySync<
 	T,
 	C = never,
 > =
 	[T, C] extends [unknown, unknown]
-		? FlowTryCreateWith.Return<T, C>
+		? FlowTryWith.Return<T, C>
 		: never
 
-export const FlowTrySync: FlowTryCreateWith<'sync'> = FlowTryCreateWith('sync')
+export const FlowTrySync: FlowTryWith<'sync'> = FlowTryWith('sync')

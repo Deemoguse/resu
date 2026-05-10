@@ -1,4 +1,4 @@
-import { InternalCreateErrorWith } from '../factories/internal-create-error-with'
+import { InternalErrorWith } from '../factories/internal-create-error-with'
 
-export type AbortError<D = unknown> = [D] extends [unknown] ? InternalCreateErrorWith.Return<'AbortError', D> : never
-export const AbortError: InternalCreateErrorWith<'AbortError'> = InternalCreateErrorWith('AbortError')
+export type AbortError<D = unknown> = [D] extends [unknown] ? InternalErrorWith.Return<'AbortError', D> : never
+export const AbortError: InternalErrorWith<'AbortError'> = InternalErrorWith('AbortError')

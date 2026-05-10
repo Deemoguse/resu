@@ -6,7 +6,7 @@ export namespace Result {
 	export type Data = unknown
 
 	export type AnyTag = NonUndefined<Tag>
-	export type AnyData = NonUndefined<null | {}> // eslint-disable-line @typescript-eslint/no-empty-object-type
+	export type AnyData = NonUndefined<Data>
 
 	export type Params<
 		S extends Result.Status,
