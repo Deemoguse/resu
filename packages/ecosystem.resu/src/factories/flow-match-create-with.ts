@@ -11,6 +11,13 @@ export namespace FlowMatchWith {
 		>
 	}
 
+	export interface StrictKind extends Match.Kind {
+		type: FlowMatchStrict<
+			this['R'] extends ResultAny ? this['R'] : never,
+			this['L'] extends ResultAny ? this['L'] : never
+		>
+	}
+
 	export type Return<
 		M extends 'loose' | 'strict',
 		R extends ResultAny,
@@ -71,10 +78,10 @@ export class FlowMatchStrict<
 	R extends ResultAny = never,
 	L extends ResultAny = never,
 >
-	extends Match<R, L, FlowMatchWith.LooseKind>
+	extends Match<R, L, FlowMatchWith.StrictKind>
 {
 	constructor(result: L) {
-		super(FlowMatchLoose as Match.KindTarget<FlowMatchWith.LooseKind>, result)
+		super(FlowMatchLoose as Match.KindTarget<FlowMatchWith.StrictKind>, result)
 	}
 
 	public result(): FlowTrySync<R | L> {
