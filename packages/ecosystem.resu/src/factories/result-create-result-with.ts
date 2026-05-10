@@ -1,4 +1,4 @@
-import { Result } from '../models/result'
+import { Result } from '../classes/result'
 import type { NonUndefined } from '../types/non-undefined'
 
 export declare namespace ResultWith {

@@ -1,7 +1,7 @@
-import { Result } from '../models/result'
+import { Result } from '../classes/result'
 import { ResultOk } from '../operations/result-ok'
 import { ResultError } from '../operations/result-error'
-import { ResultIsAny } from '../operations/result-is-any'
+import { ResultIs } from '../operations/result-is'
 import type { NonUndefined } from '../types/non-undefined'
 
 export namespace ResultFromWith {
@@ -41,7 +41,7 @@ export function ResultFromWith<
 ) {
 	return ((value, tag) => {
 		const contructor = status === 'ok' ? ResultOk : ResultError
-		return ResultIsAny(value)
+		return ResultIs(value)
 			? contructor({ data: value.data, tag: tag ?? value.tag })
 			: contructor({ data: value as 1, tag: tag })
 	}) as ResultFromWith<S>

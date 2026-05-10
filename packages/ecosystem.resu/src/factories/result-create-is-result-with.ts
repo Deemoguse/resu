@@ -1,4 +1,4 @@
-import { Result } from '../models/result'
+import { Result } from '../classes/result'
 import type { ResultAny } from '../operations/result-any'
 import type { ResultAnyOk } from '../operations/result-any-ok'
 import type { ResultAnyError } from '../operations/result-any-error'

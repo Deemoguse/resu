@@ -1,4 +1,4 @@
-import { Result } from '../models/result'
+import { Result } from '../classes/result'
 import { ResultWith } from '../factories/result-create-result-with'
 
 export type ResultOk<

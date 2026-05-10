@@ -1,8 +1,8 @@
 import { ResultErrorFrom } from '../operations/result-error-from'
-import type { Result } from '../models/result'
+import type { Result } from '../classes/result'
 import type { NonUndefined } from '../types/non-undefined'
 
-export namespace InternalCreateErrorWith {
+export namespace InternalErrorWith {
 	export type Return<
 		T extends Result.Tag,
 		D,
@@ -12,17 +12,23 @@ export namespace InternalCreateErrorWith {
 			: never
 }
 
-export type InternalCreateErrorWith<T extends Result.Tag> = [T] extends [unknown]
+export type InternalErrorWith<T extends Result.Tag> = [T] extends [unknown]
 	? {
-		<E extends Error>(error: E): InternalCreateErrorWith.Return<T, E>
-		<M extends string>(message: M): InternalCreateErrorWith.Return<T, M>
-		<D = null>(data: NonUndefined<D>): InternalCreateErrorWith.Return<T, D>
-		(): InternalCreateErrorWith.Return<T, null>
+		<E extends Error>(error: E): InternalErrorWith.Return<T, E>
+		<M extends string>(message: M): InternalErrorWith.Return<T, M>
+		<D = null>(data: NonUndefined<D>): InternalErrorWith.Return<T, D>
+		(): InternalErrorWith.Return<T, null>
 	}
 	: never
 
-export function InternalCreateErrorWith<T extends Result.Tag>(tag: T): InternalCreateErrorWith<T> {
+export function InternalErrorWith<T extends Result.Tag>(tag: T): InternalErrorWith<T> {
 	return function (data: unknown) {
-		return ResultErrorFrom(data, tag)
-	} as InternalCreateErrorWith<T>
+		const resolvedData = data instanceof Error
+			? data
+			: typeof data === 'string'
+				? new Error(data)
+				: data
+
+		return ResultErrorFrom(resolvedData, tag)
+	} as InternalErrorWith<T>
 }

@@ -1,7 +1,7 @@
 export { ResultErrorFromUnlessOk as ErrorFromUnlessOk } from '../../operations/result-error-from-unless-ok'
 export { ResultErrorFrom as ErrorFrom } from '../../operations/result-error-from'
 export { ResultError as Error } from '../../operations/result-error'
-export { ResultIsAny as IsAny } from '../../operations/result-is-any'
+export { ResultIs as Is } from '../../operations/result-is'
 export { ResultIsError as IsError } from '../../operations/result-is-error'
 export { ResultIsOk as IsOk } from '../../operations/result-is-ok'
 export { ResultOkFromUnlessError as OkFromUnlessError } from '../../operations/result-ok-from-unless-error'
