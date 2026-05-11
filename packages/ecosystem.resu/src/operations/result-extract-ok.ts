@@ -1,11 +1,10 @@
 import type { Result } from '../classes/result'
-import type { ResultAny } from './result-any'
 import type { ResultExtract } from './result-extract'
 
 export type ResultExtractOk<
-	R extends ResultAny,
+	V,
 	T extends Result.Tag = never,
 > =
-	[R, T] extends [unknown, unknown]
-		? ResultExtract<R, 'ok', T>
+	[V, T] extends [unknown, unknown]
+		? ResultExtract<V, 'ok', T>
 		: never
