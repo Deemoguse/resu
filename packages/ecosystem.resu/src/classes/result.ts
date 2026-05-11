@@ -6,7 +6,7 @@ export namespace Result {
 	export type Data = unknown
 
 	export type AnyTag = NonUndefined<Tag>
-	export type AnyData = NonUndefined<Data>
+	export type AnyData = NonUndefined<{} | null> // eslint-disable-line @typescript-eslint/no-empty-object-type
 
 	export type Params<
 		S extends Result.Status,
@@ -28,12 +28,12 @@ export class Result<
 	D = null,
 > {
 	public readonly status: S
-	public readonly tag: NonUndefined<T>
+	public readonly tag: T
 	public readonly data: NonUndefined<D>
 
 	constructor(params: Result.Params<S, T, D>) {
 		this.status = params.status
-		this.tag = (params.tag ?? null) as NonUndefined<T>
+		this.tag = (params.tag ?? null) as T
 		this.data = (params.data ?? null) as NonUndefined<D>
 
 		return Object.freeze(this)
