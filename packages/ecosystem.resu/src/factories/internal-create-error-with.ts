@@ -5,7 +5,7 @@ import type { NonUndefined } from '../types/non-undefined'
 export namespace InternalErrorWith {
 	export type Return<
 		T extends Result.Tag,
-		D,
+		D = Result.AnyData,
 	> =
 		[T, D] extends [unknown, unknown]
 			? ResultErrorFrom<D, T>

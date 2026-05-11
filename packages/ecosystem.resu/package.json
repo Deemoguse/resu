@@ -6,110 +6,39 @@
 	"files": [
 		"dist"
 	],
-	"main": "./dist/index.cjs",
-	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.cts",
 	"exports": {
-		".": {
-			"import": "./dist/index.mjs",
-			"require": "./dist/index.cjs"
-		},
-		"./flow-function-async": {
-			"import": "./dist/flow-function-async.mjs",
-			"require": "./dist/flow-function-async.cjs"
-		},
-		"./flow-function-sync": {
-			"import": "./dist/flow-function-sync.mjs",
-			"require": "./dist/flow-function-sync.cjs"
-		},
-		"./flow-match-loose": {
-			"import": "./dist/flow-match-loose.mjs",
-			"require": "./dist/flow-match-loose.cjs"
-		},
-		"./flow-match-strict": {
-			"import": "./dist/flow-match-strict.mjs",
-			"require": "./dist/flow-match-strict.cjs"
-		},
-		"./flow-try-async": {
-			"import": "./dist/flow-try-async.mjs",
-			"require": "./dist/flow-try-async.cjs"
-		},
-		"./flow-try-sync": {
-			"import": "./dist/flow-try-sync.mjs",
-			"require": "./dist/flow-try-sync.cjs"
-		},
-		"./result-any": {
-			"import": "./dist/result-any.mjs",
-			"require": "./dist/result-any.cjs"
-		},
-		"./result-any-error": {
-			"import": "./dist/result-any-error.mjs",
-			"require": "./dist/result-any-error.cjs"
-		},
-		"./result-any-ok": {
-			"import": "./dist/result-any-ok.mjs",
-			"require": "./dist/result-any-ok.cjs"
-		},
-		"./result-error": {
-			"import": "./dist/result-error.mjs",
-			"require": "./dist/result-error.cjs"
-		},
-		"./result-error-from": {
-			"import": "./dist/result-error-from.mjs",
-			"require": "./dist/result-error-from.cjs"
-		},
-		"./result-error-from-unless-ok": {
-			"import": "./dist/result-error-from-unless-ok.mjs",
-			"require": "./dist/result-error-from-unless-ok.cjs"
-		},
-		"./result-exclude": {
-			"import": "./dist/result-exclude.mjs",
-			"require": "./dist/result-exclude.cjs"
-		},
-		"./result-exclude-error": {
-			"import": "./dist/result-exclude-error.mjs",
-			"require": "./dist/result-exclude-error.cjs"
-		},
-		"./result-exclude-ok": {
-			"import": "./dist/result-exclude-ok.mjs",
-			"require": "./dist/result-exclude-ok.cjs"
-		},
-		"./result-extract": {
-			"import": "./dist/result-extract.mjs",
-			"require": "./dist/result-extract.cjs"
-		},
-		"./result-extract-error": {
-			"import": "./dist/result-extract-error.mjs",
-			"require": "./dist/result-extract-error.cjs"
-		},
-		"./result-extract-ok": {
-			"import": "./dist/result-extract-ok.mjs",
-			"require": "./dist/result-extract-ok.cjs"
-		},
-		"./result-is": {
-			"import": "./dist/result-is.mjs",
-			"require": "./dist/result-is.cjs"
-		},
-		"./result-is-error": {
-			"import": "./dist/result-is-error.mjs",
-			"require": "./dist/result-is-error.cjs"
-		},
-		"./result-is-ok": {
-			"import": "./dist/result-is-ok.mjs",
-			"require": "./dist/result-is-ok.cjs"
-		},
-		"./result-ok": {
-			"import": "./dist/result-ok.mjs",
-			"require": "./dist/result-ok.cjs"
-		},
-		"./result-ok-from": {
-			"import": "./dist/result-ok-from.mjs",
-			"require": "./dist/result-ok-from.cjs"
-		},
-		"./result-ok-from-unless-error": {
-			"import": "./dist/result-ok-from-unless-error.mjs",
-			"require": "./dist/result-ok-from-unless-error.cjs"
-		},
+		".": "./dist/index.mjs",
+		"./flow-function-async": "./dist/flow-function-async.mjs",
+		"./flow-function-sync": "./dist/flow-function-sync.mjs",
+		"./flow-match-loose": "./dist/flow-match-loose.mjs",
+		"./flow-match-strict": "./dist/flow-match-strict.mjs",
+		"./flow-try-async": "./dist/flow-try-async.mjs",
+		"./flow-try-sync": "./dist/flow-try-sync.mjs",
+		"./result-any": "./dist/result-any.mjs",
+		"./result-any-error": "./dist/result-any-error.mjs",
+		"./result-any-ok": "./dist/result-any-ok.mjs",
+		"./result-error": "./dist/result-error.mjs",
+		"./result-error-from": "./dist/result-error-from.mjs",
+		"./result-error-from-unless-ok": "./dist/result-error-from-unless-ok.mjs",
+		"./result-exclude": "./dist/result-exclude.mjs",
+		"./result-exclude-error": "./dist/result-exclude-error.mjs",
+		"./result-exclude-ok": "./dist/result-exclude-ok.mjs",
+		"./result-extract": "./dist/result-extract.mjs",
+		"./result-extract-error": "./dist/result-extract-error.mjs",
+		"./result-extract-ok": "./dist/result-extract-ok.mjs",
+		"./result-is": "./dist/result-is.mjs",
+		"./result-is-error": "./dist/result-is-error.mjs",
+		"./result-is-ok": "./dist/result-is-ok.mjs",
+		"./result-ok": "./dist/result-ok.mjs",
+		"./result-ok-from": "./dist/result-ok-from.mjs",
+		"./result-ok-from-unless-error": "./dist/result-ok-from-unless-error.mjs",
+		"./runtime-gen-async": "./dist/runtime-gen-async.mjs",
+		"./runtime-gen-sync": "./dist/runtime-gen-sync.mjs",
+		"./runtime-unwrap-async": "./dist/runtime-unwrap-async.mjs",
+		"./runtime-unwrap-sync": "./dist/runtime-unwrap-sync.mjs",
+		"./runtime-unwrap-tagged-async": "./dist/runtime-unwrap-tagged-async.mjs",
+		"./runtime-unwrap-tagged-sync": "./dist/runtime-unwrap-tagged-sync.mjs",
 		"./package.json": "./package.json"
 	},
 	"scripts": {
