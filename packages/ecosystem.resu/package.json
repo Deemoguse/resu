@@ -12,6 +12,10 @@
 			"import": "./dist/index.mjs",
 			"require": "./dist/index.cjs"
 		},
+		"./emitter": {
+			"import": "./dist/emitter.mjs",
+			"require": "./dist/emitter.cjs"
+		},
 		"./flow-function-async": {
 			"import": "./dist/flow-function-async.mjs",
 			"require": "./dist/flow-function-async.cjs"
@@ -47,6 +51,14 @@
 		"./result-any-ok": {
 			"import": "./dist/result-any-ok.mjs",
 			"require": "./dist/result-any-ok.cjs"
+		},
+		"./result-emitters-add": {
+			"import": "./dist/result-emitters-add.mjs",
+			"require": "./dist/result-emitters-add.cjs"
+		},
+		"./result-emitters-delete": {
+			"import": "./dist/result-emitters-delete.mjs",
+			"require": "./dist/result-emitters-delete.cjs"
 		},
 		"./result-error": {
 			"import": "./dist/result-error.mjs",

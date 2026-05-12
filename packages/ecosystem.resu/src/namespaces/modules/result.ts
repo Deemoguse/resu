@@ -11,3 +11,5 @@ export { ResultOk as Ok } from '../../operations/result-ok'
 export type { ResultAnyError as AnyError } from '../../operations/result-any-error'
 export type { ResultAnyOk as AnyOk } from '../../operations/result-any-ok'
 export type { ResultAny as Any } from '../../operations/result-any'
+
+export * as Emitters from './result-emitters'

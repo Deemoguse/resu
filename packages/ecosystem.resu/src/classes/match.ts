@@ -123,16 +123,6 @@ export abstract class Match<
 
 	public readonly any: Match.WithStatus<K, 'any', R, L> = this._withStatus('any')
 
-	private _createStore(base?: Match.Store): Match.Store {
-		return {
-			ok: new Map(base?.ok),
-			error: new Map(base?.error),
-			okAny: base?.okAny,
-			errorAny: base?.errorAny,
-			any: base?.any,
-		}
-	}
-
 	protected resolveResult<R1 extends ResultAny>(cb: (missmatch: boolean, result: ResultAny) => R1): FlowTrySync<R1> {
 		const result = FlowTrySync(() => {
 			if (this.store.usageError) return this.store.usageError
@@ -145,6 +135,16 @@ export abstract class Match<
 		})
 
 		return result as FlowTrySync<R1>
+	}
+
+	private _createStore(base?: Match.Store): Match.Store {
+		return {
+			ok: new Map(base?.ok),
+			error: new Map(base?.error),
+			okAny: base?.okAny,
+			errorAny: base?.errorAny,
+			any: base?.any,
+		}
 	}
 
 	private _withTag <S extends Result.Status>(status: S): Match.WithTag<K, S, R, L> {
