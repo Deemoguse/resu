@@ -1,4 +1,6 @@
+import type { ResultAny } from '../operations/result-any'
 import type { NonUndefined } from '../types/non-undefined'
+import type { Emitter } from './emitter'
 
 export namespace Result {
 	export type Status = 'ok' | 'error'
@@ -18,6 +20,7 @@ export namespace Result {
 				status: S
 				tag?: NonUndefined<T>
 				data?: NonUndefined<D>
+				emit?: boolean
 			}
 			: never
 }
@@ -27,6 +30,27 @@ export class Result<
 	T extends Result.Tag = null,
 	D = null,
 > {
+	private static _getEmitterSet(): Set<Emitter> {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		const ctx = window || globalThis
+		// @ts-expect-error eslint-disable-line @typescript-eslint/ban-ts-comment
+		return (ctx['__RESU_EMITTERS__'] ||= new Set()) as Set<Emitter>
+	}
+
+	public static addEmmiter(emmiter: Emitter): void {
+		const emmiters = this._getEmitterSet()
+		emmiters.add(emmiter)
+	}
+
+	public static deleteEmmiter(emmiter: Emitter): void {
+		const emmiters = this._getEmitterSet()
+		if (!emmiters.has(emmiter)) return
+		emmiters.delete(emmiter)
+		emmiter.offAll()
+	}
+
+	// ---------------------------------------------------------------------
+
 	public readonly status: S
 	public readonly tag: T
 	public readonly data: NonUndefined<D>
@@ -36,6 +60,18 @@ export class Result<
 		this.tag = (params.tag ?? null) as T
 		this.data = (params.data ?? null) as NonUndefined<D>
 
-		return Object.freeze(this)
+		this._callEmit(params.emit)
+		return Object.freeze(this) as this
+	}
+
+	private _callEmit(emit?: boolean): void {
+		const emmiters = Result._getEmitterSet()
+		emmiters.forEach((emmiter) => {
+			const allow = emit ?? this.status === 'ok'
+				? emmiter.emitOk?.(this as ResultAny)
+				: emmiter.emitError?.(this as ResultAny)
+
+			if (allow) emmiter.emit(this as ResultAny)
+		})
 	}
 }
