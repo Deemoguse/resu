@@ -72,8 +72,11 @@ export function RuntimeUnwrapCreateWith<
 			? await FlowTryAsync<ResultAny>(() => map(resolvedValue))
 			: resolvedValue
 
-		yield (subtype === 'tagged' ? { data: result.data, tag: result.tag } : result.data)
-		return result
+		yield result
+
+		return subtype === 'tagged'
+			? { data: result.data, tag: result.tag }
+			: result.data
 	} as RuntimeUnwrapCreateWith<'async', T2> as RuntimeUnwrapCreateWith<T1, T2>
 
 	else return function* (value, map) {
@@ -81,7 +84,10 @@ export function RuntimeUnwrapCreateWith<
 			? FlowTrySync<ResultAny>(() => map(value))
 			: value
 
-		yield (subtype === 'tagged' ? { data: result.data, tag: result.tag } : result.data)
-		return result
+		yield result
+
+		return subtype === 'tagged'
+			? { data: result.data, tag: result.tag }
+			: result.data
 	} as RuntimeUnwrapCreateWith<'sync', T2> as RuntimeUnwrapCreateWith<T1, T2>
 }

@@ -6,4 +6,4 @@ export type RuntimeGenAsync<V> =
 		? RuntimeGenCreateWith.Return<'async', ResultOkFromUnlessError<V>, V>
 		: never
 
-export const RuntimeGenAsync: RuntimeGenCreateWith<'sync'> = RuntimeGenCreateWith('sync')
+export const RuntimeGenAsync: RuntimeGenCreateWith<'async'> = RuntimeGenCreateWith('async')

@@ -18,6 +18,7 @@ describe('FlowMatchLoose', () => {
 	it('returns the original result when no handler matches', () => {
 		const input = ResultError({ tag: 'Failure', data: 'broken' })
 		const result = FlowMatchLoose(input)
+			// @ts-expect-error
 			.ok(['Success'], () => 'handled')
 			.result()
 
