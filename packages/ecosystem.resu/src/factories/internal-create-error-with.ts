@@ -1,6 +1,6 @@
 import { ResultErrorFrom } from '../operations/result-error-from'
 import type { Result } from '../classes/result'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
 
 export namespace InternalErrorWith {
 	export type Return<
@@ -16,7 +16,7 @@ export type InternalErrorWith<T extends Result.Tag> = [T] extends [unknown]
 	? {
 		<E extends Error>(error: E): InternalErrorWith.Return<T, E>
 		<M extends string>(message: M): InternalErrorWith.Return<T, M>
-		<D = null>(data: NonUndefined<D>): InternalErrorWith.Return<T, D>
+		<D = null>(data: NonUndefinedSync<D>): InternalErrorWith.Return<T, D>
 		(): InternalErrorWith.Return<T, null>
 	}
 	: never

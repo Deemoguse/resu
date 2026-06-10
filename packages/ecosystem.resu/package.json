@@ -3,9 +3,9 @@
 	"name": "@wambata/resu",
 	"version": "0.0.1",
 	"type": "module",
-	"files": [
-		"dist"
-	],
+	"files": [ "dist", "./test/types/_entry.d.ts" ],
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.cts",
 	"exports": {
 		".": {
@@ -153,7 +153,7 @@
 		"lint-fix": "npm run lint -- --fix",
 		"test": "npm run test:runtime && npm run test:types",
 		"test:runtime": "vitest run",
-		"test:types": "tsd --typings ./dist/index.d.cts"
+		"test:types": "tsd --typings ./test/types/_entry.d.ts --files ./test/types/**/*.test-d.ts"
 	},
 	"devDependencies": {
 		"@internal/configs": "1.0.0",
@@ -164,8 +164,6 @@
 		"typescript": "^6.0.3",
 		"vitest": "^4.1.7"
 	},
-	"main": "./dist/index.cjs",
-	"module": "./dist/index.mjs",
 	"tsd": {
 		"compilerOptions": {
 			"composite": false,

@@ -3,7 +3,7 @@ import { FlowTrySync } from '../operations/flow-try-sync'
 import { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 import type { Result } from './result'
 import type { ResultAny } from '../operations/result-any'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
 import type { ResultExclude } from '../operations/result-exclude'
 import type { ResultAnyError } from '../operations/result-any-error'
 import type { ResultExtract } from '../operations/result-extract'
@@ -23,7 +23,7 @@ export namespace Match {
 
 	export type Handler<R extends ResultAny = ResultAny, V = unknown> =
 		[R, V] extends [unknown, unknown]
-			? (result: R) => NonUndefined<V>
+			? (result: R) => NonUndefinedSync<V>
 			: never
 
 	export type Store = {
@@ -42,15 +42,17 @@ export namespace Match {
 		L extends ResultAny,
 	> =
 		[K, S, R, L] extends [unknown, unknown, unknown, unknown]
-			? [ResultExtract<L, S>] extends [never] ? never : <
-				T extends ResultExtract<L, S>['tag'],
-				V,
-			>(
-				tags: NonAmptyArray<T>,
-				handler: Handler<ResultExtract<L, S, T>, V>,
-			) => (
-				Match.Apply<K, Match.CalcResult<R, V>, Match.CalcLeft<S, L, T>>
-			)
+			? [ResultExtract<L, S>] extends [never]
+				? never
+				: <
+					T extends ResultExtract<L, S>['tag'],
+					V,
+				>(
+					tags: NonAmptyArray<T>,
+					handler: Handler<ResultExtract<L, S, T>, V>,
+				) => (
+					Match.Apply<K, Match.CalcResult<R, V>, Match.CalcLeft<S, L, T>>
+				)
 			: never
 
 	export type WithStatus<
@@ -61,8 +63,12 @@ export namespace Match {
 	> =
 		[K, S, R, L] extends [unknown, unknown, unknown, unknown]
 			? S extends Result.Status
-				? <V>(handler: Handler<ResultExtract<L, S>, V>) => Match.Apply<K, Match.CalcResult<R, V>, ResultExclude<L, S>>
-				: <V>(handler: Handler<L, V>) => Match.Apply<K, Match.CalcResult<R, V>, never>
+				? [ResultExtract<L, S>] extends [never]
+					? never
+					: <V>(handler: Handler<ResultExtract<L, S>, V>) => Match.Apply<K, Match.CalcResult<R, V>, ResultExclude<L, S>>
+				: [L] extends [never]
+					? never
+					: <V>(handler: Handler<L, V>) => Match.Apply<K, Match.CalcResult<R, V>, never>
 			: never
 
 	export type CalcResult<

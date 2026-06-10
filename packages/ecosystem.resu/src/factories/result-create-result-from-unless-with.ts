@@ -6,7 +6,7 @@ import { ResultErrorFrom } from '../operations/result-error-from'
 import type { Result } from '../classes/result'
 import type { ResultAnyOk } from '../operations/result-any-ok'
 import type { ResultAnyError } from '../operations/result-any-error'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
 
 export namespace ResultFromUnlessWith {
 	export type Return<
@@ -29,7 +29,7 @@ export type ResultFromUnlessWith<
 			V,
 			T extends Result.Tag,
 		> (
-			value: NonUndefined<V>,
+			value: NonUndefinedSync<V>,
 			tag?: T,
 		) => (
 			ResultFromUnlessWith.Return<S, V, T>

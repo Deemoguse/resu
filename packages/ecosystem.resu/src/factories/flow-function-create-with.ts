@@ -1,6 +1,7 @@
 import { FlowTrySync } from '../operations/flow-try-sync'
 import { FlowTryAsync } from '../operations/flow-try-async'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
+import type { NonUndefinedAsync } from '../types/non-undefined-async'
 
 export namespace FlowFunctionWith {
 	export type Return<
@@ -18,8 +19,8 @@ export namespace FlowFunctionWith {
 export type FlowFunctionWith<M extends 'sync' | 'async'> =
 	[M] extends [unknown]
 		? M extends 'sync'
-			? <R, A extends unknown[]>(func: (...args: A) => NonUndefined<R>) => FlowFunctionWith.Return<M, A, R>
-			: <R, A extends unknown[]>(func: (...args: A) => NonUndefined<R> | Promise<NonUndefined<R>>) => FlowFunctionWith.Return<M, A, R>
+			? <R, A extends unknown[]>(func: (...args: A) => NonUndefinedSync<R>) => FlowFunctionWith.Return<M, A, R>
+			: <R, A extends unknown[]>(func: (...args: A) => NonUndefinedAsync<R>) => FlowFunctionWith.Return<M, A, R>
 		: never
 
 export function FlowFunctionWith<M extends 'sync' | 'async'>(mode: M): FlowFunctionWith<M> {

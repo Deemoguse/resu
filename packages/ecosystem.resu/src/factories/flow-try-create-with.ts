@@ -2,7 +2,8 @@ import { AbortError } from '../errors/abort-error'
 import { RuntimeError } from '../errors/runtime-error'
 import { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 import type { ResultAny } from '../operations/result-any'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
+import type { NonUndefinedAsync } from '../types/non-undefined-async'
 
 export namespace FlowTryWith {
 	export type Return<
@@ -20,8 +21,8 @@ export namespace FlowTryWith {
 	> =
 		[T, C] extends [unknown, unknown]
 			? {
-				try: () => NonUndefined<T>
-				catch?: () => NonUndefined<C>
+				try: () => NonUndefinedSync<T>
+				catch?: () => NonUndefinedSync<C>
 			}
 			: never
 
@@ -33,12 +34,12 @@ export namespace FlowTryWith {
 		[T, C, S] extends [unknown, unknown, unknown]
 			? S extends true ? {
 				signal: AbortSignal
-				try: (signal: AbortSignal) => NonUndefined<T> | Promise<NonUndefined<T>>
-				catch?: (error: unknown) => NonUndefined<C> | Promise<NonUndefined<C>>
+				try: (signal: AbortSignal) => NonUndefinedAsync<T>
+				catch?: (error: unknown) => NonUndefinedAsync<C>
 			} : {
 				signal?: AbortSignal
-				try: () => NonUndefined<T> | Promise<NonUndefined<T>>
-				catch?: (error: unknown) => NonUndefined<C> | Promise<NonUndefined<C>>
+				try: () => NonUndefinedAsync<T>
+				catch?: (error: unknown) => NonUndefinedAsync<C>
 			}
 			: never
 
@@ -55,11 +56,11 @@ export type FlowTryWith<
 	[M] extends [unknown]
 		? M extends 'sync' ? {
 			<T, C = never> (operation: FlowTryWith.SyncBranches<T, C>): FlowTryWith.Return<T, C>
-			<T> (operation: () => NonUndefined<T>): FlowTryWith.Return<T>
+			<T> (operation: () => NonUndefinedSync<T>): FlowTryWith.Return<T>
 		} : {
 			<T, C = never> (operation: FlowTryWith.AsyncBranches<T, C, true>): Promise<FlowTryWith.Return<T, C, true>>
 			<T, C = never> (operation: FlowTryWith.AsyncBranches<T, C>): Promise<FlowTryWith.Return<T, C>>
-			<T> (operation: () => NonUndefined<T> | Promise<NonUndefined<T>>): Promise<FlowTryWith.Return<T>>
+			<T> (operation: () => NonUndefinedAsync<T>): Promise<FlowTryWith.Return<T>>
 		}
 		: never
 

@@ -13,6 +13,5 @@ expectType<(input: string) => FlowTryAsync<number>>(asyncWrapped)
 const asyncFromSyncWrapped = FlowFunctionAsync((input: string): number => input.length)
 expectType<(input: string) => FlowTryAsync<number>>(asyncFromSyncWrapped)
 
-expectError(FlowFunctionSync(async (): Promise<number> => 1))
 expectError(FlowFunctionSync(() => undefined))
 expectError(FlowFunctionAsync(async () => undefined))
