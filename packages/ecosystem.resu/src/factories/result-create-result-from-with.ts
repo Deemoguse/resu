@@ -2,7 +2,7 @@ import { Result } from '../classes/result'
 import { ResultOk } from '../operations/result-ok'
 import { ResultError } from '../operations/result-error'
 import { ResultIs } from '../operations/result-is'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
 
 export namespace ResultFromWith {
 	export type Return<
@@ -25,7 +25,7 @@ export type ResultFromWith<
 			V,
 			T extends Result.Tag = never,
 		> (
-			value: NonUndefined<V>,
+			value: NonUndefinedSync<V>,
 			tag?: T,
 		) => (
 			ResultFromWith.Return<S, V, T>

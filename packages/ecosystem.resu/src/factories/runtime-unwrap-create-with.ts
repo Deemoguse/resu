@@ -2,7 +2,8 @@ import { ResultIs } from '../operations/result-is'
 import { FlowTryAsync } from '../operations/flow-try-async'
 import { FlowTrySync } from '../operations/flow-try-sync'
 import type { ResultAny } from '../operations/result-any'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
+import type { NonUndefinedAsync } from '../types/non-undefined-async'
 import type { ResultExtractOk } from '../operations/result-extract-ok'
 import type { ResultAnyOk } from '../operations/result-any-ok'
 
@@ -38,19 +39,19 @@ export type RuntimeUnwrapCreateWith<
 		? {
 			<V, R extends ResultAny>(
 				value: T1 extends 'async'
-					? (NonUndefined<V> | Promise<NonUndefined<V>>)
-					: V,
+					? NonUndefinedAsync<V>
+					: NonUndefinedSync<V>,
 				map: (value: V) => T1 extends 'async'
-					? (R | Promise<R>)
-					: R
+					? NonUndefinedAsync<R>
+					: NonUndefinedSync<R>
 			): (
 				RuntimeUnwrapCreateWith.Return<T1, T2, R>
 			)
 
 			<R extends ResultAny>(
 				result: T1 extends 'async'
-					? (R | Promise<R>)
-					: R
+					? NonUndefinedAsync<R>
+					: NonUndefinedSync<R>
 			): (
 				RuntimeUnwrapCreateWith.Return<T1, T2, R>
 			)
@@ -72,8 +73,11 @@ export function RuntimeUnwrapCreateWith<
 			? await FlowTryAsync<ResultAny>(() => map(resolvedValue))
 			: resolvedValue
 
-		yield (subtype === 'tagged' ? { data: result.data, tag: result.tag } : result.data)
-		return result
+		yield result
+
+		return subtype === 'tagged'
+			? { data: result.data, tag: result.tag }
+			: result.data
 	} as RuntimeUnwrapCreateWith<'async', T2> as RuntimeUnwrapCreateWith<T1, T2>
 
 	else return function* (value, map) {
@@ -81,7 +85,10 @@ export function RuntimeUnwrapCreateWith<
 			? FlowTrySync<ResultAny>(() => map(value))
 			: value
 
-		yield (subtype === 'tagged' ? { data: result.data, tag: result.tag } : result.data)
-		return result
+		yield result
+
+		return subtype === 'tagged'
+			? { data: result.data, tag: result.tag }
+			: result.data
 	} as RuntimeUnwrapCreateWith<'sync', T2> as RuntimeUnwrapCreateWith<T1, T2>
 }

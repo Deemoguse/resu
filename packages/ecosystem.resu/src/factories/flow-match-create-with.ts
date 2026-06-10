@@ -35,8 +35,8 @@ export type FlowMatchWith<
 > =
 	[M] extends [unknown]
 		? <
-			R extends ResultAny,
-			L extends ResultAny,
+			R extends ResultAny = never,
+			L extends ResultAny = never,
 		>(
 			result: L,
 		) => (
@@ -64,13 +64,13 @@ export class FlowMatchLoose<
 >
 	extends Match<R, L, FlowMatchWith.LooseKind>
 {
-	constructor(result: L) {
-		super(FlowMatchLoose as Match.KindTarget<FlowMatchWith.LooseKind>, result)
+	constructor(result: L, store?: Match.Store) {
+		super(new.target as Match.KindTarget<FlowMatchWith.LooseKind>, result, store)
 	}
 
 	public result(): FlowTrySync<R | L> {
 		const result = this.resolveResult((_, result) => result)
-		return result.data as FlowTrySync<R | L>
+		return result as FlowTrySync<R | L>
 	}
 }
 
@@ -80,8 +80,8 @@ export class FlowMatchStrict<
 >
 	extends Match<R, L, FlowMatchWith.StrictKind>
 {
-	constructor(result: L) {
-		super(FlowMatchLoose as Match.KindTarget<FlowMatchWith.StrictKind>, result)
+	constructor(result: L, store?: Match.Store) {
+		super(new.target as Match.KindTarget<FlowMatchWith.StrictKind>, result, store)
 	}
 
 	public result(): FlowTrySync<R | L> {
@@ -90,6 +90,6 @@ export class FlowMatchStrict<
 				? RuntimeError('Non-exhaustive match. The current result variant was not handled.')
 				: result
 		})
-		return result.data as FlowTrySync<R | L>
+		return result as FlowTrySync<R | L>
 	}
 }

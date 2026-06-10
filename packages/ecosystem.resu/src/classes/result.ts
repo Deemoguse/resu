@@ -1,5 +1,5 @@
 import type { ResultAny } from '../operations/result-any'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
 import type { Emitter } from './emitter'
 
 export namespace Result {
@@ -7,8 +7,8 @@ export namespace Result {
 	export type Tag = null | string
 	export type Data = unknown
 
-	export type AnyTag = NonUndefined<Tag>
-	export type AnyData = NonUndefined<unknown>
+	export type AnyTag = NonUndefinedSync<Tag>
+	export type AnyData = NonUndefinedSync<unknown>
 
 	export type Params<
 		S extends Result.Status,
@@ -18,8 +18,8 @@ export namespace Result {
 		[S, T, D] extends [unknown, unknown, unknown]
 			? {
 				status: S
-				tag?: NonUndefined<T>
-				data?: NonUndefined<D>
+				tag?: NonUndefinedSync<T>
+				data?: NonUndefinedSync<D>
 				emit?: boolean
 			}
 			: never
@@ -53,12 +53,12 @@ export class Result<
 
 	public readonly status: S
 	public readonly tag: T
-	public readonly data: NonUndefined<D>
+	public readonly data: NonUndefinedSync<D>
 
 	constructor(params: Result.Params<S, T, D>) {
 		this.status = params.status
 		this.tag = (params.tag ?? null) as T
-		this.data = (params.data ?? null) as NonUndefined<D>
+		this.data = (params.data ?? null) as NonUndefinedSync<D>
 
 		this._callEmit(params.emit)
 		return Object.freeze(this) as this

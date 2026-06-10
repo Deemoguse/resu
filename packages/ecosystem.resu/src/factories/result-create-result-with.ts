@@ -1,5 +1,5 @@
 import { Result } from '../classes/result'
-import type { NonUndefined } from '../types/non-undefined'
+import type { NonUndefinedSync } from '../types/non-undefined-sync'
 
 export declare namespace ResultWith {
 	export type Param<
@@ -8,8 +8,8 @@ export declare namespace ResultWith {
 	> =
 		[T, D] extends [unknown, unknown]
 			? {
-				tag?: NonUndefined<T>
-				data?: NonUndefined<D>
+				tag?: NonUndefinedSync<T>
+				data?: NonUndefinedSync<D>
 				log?: boolean
 			}
 			: never

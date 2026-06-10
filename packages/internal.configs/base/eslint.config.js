@@ -17,7 +17,9 @@ export function createConfig (...args) {
 		{
 			ignores: [
 				'dist/**/*',
-				'*.config.*'
+				'*.config.*',
+				'test/**/*',
+				'*.test.*',
 			],
 		},
 
