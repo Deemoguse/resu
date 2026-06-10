@@ -66,7 +66,7 @@ export type FlowTryWith<
 export function FlowTryWith<M extends 'sync' | 'async'>(mode: M): FlowTryWith<M> {
 	return function (operation: FlowTryWith.Operations) {
 		const tryFn = operation.try || operation
-		const catchFn = operation.catch || ((error) => error)
+		const catchFn = operation.catch || RuntimeError
 		const signal = operation.signal
 
 		if (mode === 'sync') {
@@ -80,8 +80,8 @@ export function FlowTryWith<M extends 'sync' | 'async'>(mode: M): FlowTryWith<M>
 			return AbortError()
 		}
 		else return new Promise<ResultAny>((res) => {
-			const tryFnPromise = (signal?: AbortSignal) => promiseResultWrap(tryFn(signal))
-			const catchFnPromise = (error?: AbortSignal) => promiseResultWrap(catchFn(error))
+			const tryFnPromise = (signal?: AbortSignal) => promiseResultWrap(Promise.resolve(signal).then(tryFn))
+			const catchFnPromise = (error?: unknown) => promiseResultWrap(Promise.resolve(error).then(catchFn)).catch(RuntimeError)
 
 			if (signal) {
 				const abortPromise = createAbortPromise(signal)
@@ -98,13 +98,8 @@ export function FlowTryWith<M extends 'sync' | 'async'>(mode: M): FlowTryWith<M>
 }
 
 async function promiseResultWrap(value: unknown): Promise<ResultAny> {
-	try {
-		const res = await Promise.resolve(value)
-		return ResultOkFromUnlessError(res)
-	}
-	catch (error) {
-		return RuntimeError(error)
-	}
+	const res = await value
+	return ResultOkFromUnlessError(res)
 }
 
 function createAbortPromise(signal: AbortSignal): {

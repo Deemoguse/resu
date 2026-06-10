@@ -94,7 +94,8 @@ describe('FlowTryAsync', () => {
 			catch: async () => { throw error },
 		})
 
-		expect(expectErrorResult(result, 'RuntimeError').data).toBe(error)
+		expectErrorResult(result, 'RuntimeError')
+		expect(result.data).toBe(error)
 	})
 
 	it('passes signal into try when it is provided', async () => {

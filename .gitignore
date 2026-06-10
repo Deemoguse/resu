@@ -1,5 +1,6 @@
 .turbo
 .vscode
+.codegraph
 !.vscode/settings.json
 node_modules
 dist
