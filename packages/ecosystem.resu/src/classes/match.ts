@@ -131,7 +131,7 @@ export abstract class Match<
 			const handler = this.store[status].get(tag) || this.store[`${status}Any`] || this.store.any
 
 			const result = FlowTrySync(() => ResultOkFromUnlessError(handler ? handler(this.inputResult) : this.inputResult))
-			return cb(!!handler, result)
+			return cb(!handler, result)
 		})
 
 		return result as FlowTrySync<R1>

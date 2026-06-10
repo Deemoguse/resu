@@ -21,7 +21,7 @@ describe('FlowMatchLoose', () => {
 			.ok(['Success'], () => 'handled')
 			.result()
 
-		expect(result).toBe(input)
+		expect(result).toStrictEqual(input)
 		expectErrorResult(result, 'Failure')
 		expect(result.data).toBe('broken')
 	})

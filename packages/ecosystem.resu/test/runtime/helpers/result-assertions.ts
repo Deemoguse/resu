@@ -13,14 +13,20 @@ const testContext = globalThis as typeof globalThis & {
 testContext.window ??= globalThis
 afterEach(() => testContext.__RESU_EMITTERS__?.clear())
 
+function assertErrorString(expected: string, received: unknown): string {
+	const prefix = `Expected an ${expected}. Received: `
+	const suffix = typeof received === 'string'? `"${received}"`: JSON.stringify(received)
+	return prefix + suffix
+}
+
 export const expectOkResult = vi.defineHelper(<T>(
 	result: unknown,
 	expected: { tag: null | string, data: T },
 ):
 	ResultAnyOk =>
 {
-	expect(ResultIsOk(result)).toBe(true)
-	if (!ResultIsOk(result)) throw new Error('Expected an ok result.')
+	const isOkResult = ResultIsOk(result)
+	if (!isOkResult) throw new Error(assertErrorString('ok result', result))
 
 	expect(result.status).toBe('ok')
 	expect(result.tag).toBe(expected.tag)
@@ -34,8 +40,8 @@ export const expectErrorResult = vi.defineHelper((
 ):
 	ResultAnyError =>
 {
-	expect(ResultIsError(result)).toBe(true)
-	if (!ResultIsError(result)) throw new Error('Expected an error result.')
+	const isErrorResult = ResultIsError(result)
+	if (!isErrorResult) throw new Error(assertErrorString('error result', result))
 
 	expect(result.status).toBe('error')
 	expect(result.tag).toBe(expectedTag)
