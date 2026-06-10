@@ -15,7 +15,7 @@ export namespace InternalErrorWith {
 export type InternalErrorWith<T extends Result.Tag> = [T] extends [unknown]
 	? {
 		<E extends Error>(error: E): InternalErrorWith.Return<T, E>
-		<M extends string>(message: M): InternalErrorWith.Return<T, M>
+		(message: string): InternalErrorWith.Return<T, Error>
 		<D = null>(data: NonUndefinedSync<D>): InternalErrorWith.Return<T, D>
 		(): InternalErrorWith.Return<T, null>
 	}
