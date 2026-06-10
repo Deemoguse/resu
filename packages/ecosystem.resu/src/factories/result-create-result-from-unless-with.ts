@@ -1,3 +1,4 @@
+import { ResultIs } from '../operations/result-is'
 import { ResultIsOk } from '../operations/result-is-ok'
 import { ResultIsError } from '../operations/result-is-error'
 import { ResultOkFrom } from '../operations/result-ok-from'
@@ -46,7 +47,7 @@ export function ResultFromUnlessWith<
 	const resultResolve = status === 'ok' ? ResultOkFrom : ResultErrorFrom
 	const resultResolveOpposite = status === 'ok' ? ResultErrorFrom : ResultOkFrom
 	return ((value: unknown, tag) => {
-		return isResultWithStatus(value)
+		return !ResultIs(value) || isResultWithStatus(value)
 			? resultResolve(value, tag)
 			: resultResolveOpposite(value)
 	}) as ResultFromUnlessWith<S>
