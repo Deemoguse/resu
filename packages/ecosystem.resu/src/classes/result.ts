@@ -32,41 +32,43 @@ export namespace Result {
 	export type AnyData = NonUndefinedSync<unknown>
 
 	/**
-	 * Constructor parameters for a concrete result instance.
+	 * Constructor parameters for a concrete result shape.
 	 *
-	 * @template S
-	 * Result status stored on the instance.
-	 *
-	 * @template T
-	 * Result tag stored on the instance.
-	 *
-	 * @template D
-	 * Result payload stored on the instance.
+	 * @template P
+	 * Result shape whose `status`, `tag`, and `data` fields define the instance.
 	 */
-	export type Params<
-		S extends Result.Status,
-		T extends Result.Tag,
-		D,
-	> =
-		[S, T, D] extends [unknown, unknown, unknown]
+	export type Params<P extends {
+		status: Result.Status
+		tag: Result.Tag
+		data: Result.Data
+	}> =
+		[P] extends [unknown]
 			? {
 				/**
 				 * Status stored on the result.
+				 *
+				 * @public
 				 */
-				status: S
+				status: P['status']
 
 				/**
 				 * Optional tag stored on the result.
+				 *
+				 * @public
 				 */
-				tag?: NonUndefinedSync<T>
+				tag?: NonUndefinedSync<P['tag']>
 
 				/**
 				 * Optional payload stored on the result.
+				 *
+				 * @public
 				 */
-				data?: NonUndefinedSync<D>
+				data?: NonUndefinedSync<P['data']>
 
 				/**
 				 * Optional emission override for result observers.
+				 *
+				 * @public
 				 */
 				emit?: boolean
 			}
@@ -79,14 +81,8 @@ export namespace Result {
  * Result instances expose only their status, optional tag, and payload. Prefer
  * the public result operation helpers for construction in application code.
  *
- * @template S
- * Status represented by this result.
- *
- * @template T
- * Tag represented by this result.
- *
- * @template D
- * Payload represented by this result.
+ * @template P
+ * Result shape whose `status`, `tag`, and `data` fields are exposed by the instance.
  *
  * @example
  * ```ts
@@ -99,12 +95,14 @@ export namespace Result {
  * const result = new Result({ status: 'error', data: new Error('boom') })
  * result.data
  * ```
+ *
+ * @public
  */
-export class Result<
-	S extends Result.Status = Result.Status,
-	T extends Result.Tag = null,
-	D = null,
-> {
+export class Result<P extends {
+	status: Result.Status
+	tag: Result.Tag
+	data: Result.Data
+}> {
 	/**
 	 * Returns the shared emitter registry.
 	 *
@@ -169,18 +167,24 @@ export class Result<
 
 	/**
 	 * Status carried by this result.
+	 *
+	 * @public
 	 */
-	public readonly status: S
+	public readonly status: P['status']
 
 	/**
 	 * Tag carried by this result.
+	 *
+	 * @public
 	 */
-	public readonly tag: T
+	public readonly tag: P['tag']
 
 	/**
 	 * Payload carried by this result.
+	 *
+	 * @public
 	 */
-	public readonly data: NonUndefinedSync<D>
+	public readonly data: NonUndefinedSync<P['data']>
 
 	/**
 	 * Creates a result with the provided status, tag, payload, and emission option.
@@ -197,11 +201,13 @@ export class Result<
 	 * ```ts
 	 * const result = new Result({ status: 'error', tag: 'Failure', data: 'broken' })
 	 * ```
+	 *
+	 * @public
 	 */
-	constructor(params: Result.Params<S, T, D>) {
+	constructor(params: Result.Params<P>) {
 		this.status = params.status
-		this.tag = (params.tag ?? null) as T
-		this.data = (params.data ?? null) as NonUndefinedSync<D>
+		this.tag = (params.tag ?? null)
+		this.data = (params.data ?? null) as NonUndefinedSync<P['data']>
 
 		this._callEmit(params.emit)
 		return Object.freeze(this) as this

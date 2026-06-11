@@ -9,7 +9,7 @@ import type { NonUndefinedSync } from '../types/non-undefined-sync'
  */
 export namespace ResultFromWith {
 	/**
-	 * Result type produced from a source value or another result.
+	 * Result type produced from a source value or another structured result.
 	 *
 	 * @template S
 	 * Status assigned to the produced result.
@@ -26,9 +26,13 @@ export namespace ResultFromWith {
 		T extends Result.Tag = never,
 	> =
 		[S, V, T] extends [unknown, unknown, unknown]
-			? V extends Result<Result.Status, infer T1, infer V1>
-				? Result<S, [T] extends [never] ? T1 : T, V1>
-				: Result<S, [T] extends [never] ? null : T, V>
+			? V extends Result<{
+				status: Result.Status
+				tag: infer T1 extends Result.Tag
+				data: infer V1 extends Result.Data
+			}>
+				? Result<{ status: S, tag: [T] extends [never] ? T1 : T, data: V1 }>
+				: Result<{ status: S, tag: [T] extends [never] ? null : T, data: V }>
 			: never
 }
 
@@ -37,6 +41,8 @@ export namespace ResultFromWith {
  *
  * @template S
  * Status assigned to every produced result.
+ *
+ * @public
  */
 export type ResultFromWith<
 	S extends Result.Status,
@@ -79,6 +85,8 @@ export type ResultFromWith<
  * const ErrorFrom = ResultFromWith('error')
  * const result = ErrorFrom(ResultOk({ tag: 'Old', data: 1 }), 'New')
  * ```
+ *
+ * @public
  */
 export function ResultFromWith<
 	S extends Result.Status,
@@ -87,10 +95,10 @@ export function ResultFromWith<
 ): (
 	ResultFromWith<S>
 ) {
-	return ((value, tag) => {
+	return function (value, tag) {
 		const contructor = status === 'ok' ? ResultOk : ResultError
 		return ResultIs(value)
 			? contructor({ data: value.data, tag: tag ?? value.tag })
-			: contructor({ data: value as 1, tag: tag })
-	}) as ResultFromWith<S>
+			: contructor({ data: value, tag: tag })
+	} as ResultFromWith<S>
 }

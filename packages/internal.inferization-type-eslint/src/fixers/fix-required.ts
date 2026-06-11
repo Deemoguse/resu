@@ -25,7 +25,7 @@ function testPreviousLineDisableDirective(
 }
 
 export function fixRequired(
-	context: RuleContext<string, any>,
+	context: RuleContext<string, unknown[]>,
 	parametersNode: TSESTree.TSTypeParameterDeclaration,
 	annotationNode: TSESTree.TypeNode,
 	patternType: 'any' | 'unknown',

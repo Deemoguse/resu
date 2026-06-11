@@ -2,7 +2,7 @@ import { Result } from '../classes/result'
 import { ResultWith } from '../factories/result-create-result-with'
 
 /**
- * Result instance with `error` status.
+ * Result instance shape with `error` status.
  *
  * @template T
  * Tag carried by the result.
@@ -15,7 +15,7 @@ export type ResultError<
 	D extends Result.Data,
 > =
 	[T, D] extends [unknown, unknown]
-		? Result<'error', T, D>
+		? Result<{ status: 'error', tag: T, data: D }>
 		: never
 
 /**

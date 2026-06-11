@@ -1,7 +1,7 @@
 import type { Result } from '../classes/result'
 
 /**
- * Extracts result variants by status and optional tag from a union.
+ * Extracts structured result variants by status and optional tag from a union.
  *
  * @template V
  * Source union to filter.
@@ -19,6 +19,6 @@ export type ResultExtract<
 > =
 	[V, S, T] extends [unknown, unknown, unknown]
 		? [T] extends [never]
-			? Extract<V, Result<S, Result.AnyTag, Result.AnyData>>
-			: Extract<V, Result<S, T, Result.AnyData>>
+			? Extract<V, Result<{ status: S, tag: Result.AnyTag, data: Result.AnyData }>>
+			: Extract<V, Result<{ status: S, tag: T, data: Result.AnyData }>>
 		: never

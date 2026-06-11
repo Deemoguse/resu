@@ -2,7 +2,7 @@ import { Result } from '../classes/result'
 import { ResultWith } from '../factories/result-create-result-with'
 
 /**
- * Result instance with `ok` status.
+ * Result instance shape with `ok` status.
  *
  * @template T
  * Tag carried by the result.
@@ -15,7 +15,7 @@ export type ResultOk<
 	D,
 > =
 	[T, D] extends [unknown, unknown]
-		? Result<'ok', T, D>
+		? Result<{ status: 'ok', tag: T, data: D }>
 		: never
 
 /**
