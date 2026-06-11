@@ -52,7 +52,7 @@ export type ResultWith<
 		> (
 			params?: ResultWith.Param<T, D>,
 		) => (
-			Result<S, T, D>
+			Result<{ status: S, tag: T, data: D }>
 		)
 		: never
 

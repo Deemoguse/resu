@@ -3,7 +3,7 @@ import type { TSESLint } from '@typescript-eslint/utils'
 import type { RuleContext } from '@typescript-eslint/utils/ts-eslint'
 
 export type CreateReporter<
-	M extends Record<string, null | Record<string, any>>,
+	M extends Record<string, null | Record<string, unknown>>,
 > = <
 	I extends keyof M,
 >(params: {
@@ -16,9 +16,9 @@ export type CreateReporter<
 )
 
 export function CreateReporter<
-	M extends Record<string, null | Record<string, any>>,
+	M extends Record<string, null | Record<string, unknown>>,
 >(
-	context: RuleContext<keyof M & string, any[]>,
+	context: RuleContext<keyof M & string, unknown[]>,
 	messages: object & { InferType: M },
 ): (
 	CreateReporter<M>
