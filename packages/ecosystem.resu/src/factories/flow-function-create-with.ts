@@ -3,7 +3,22 @@ import { FlowTryAsync } from '../operations/flow-try-async'
 import type { NonUndefinedSync } from '../types/non-undefined-sync'
 import type { NonUndefinedAsync } from '../types/non-undefined-async'
 
+/**
+ * Types for wrapping functions into flow-safe functions.
+ */
 export namespace FlowFunctionWith {
+	/**
+	 * Function type returned after wrapping a callback.
+	 *
+	 * @template M
+	 * Flow execution mode.
+	 *
+	 * @template A
+	 * Arguments accepted by the wrapped callback.
+	 *
+	 * @template R
+	 * Value returned by the wrapped callback.
+	 */
 	export type Return<
 		M extends 'sync' | 'async',
 		A extends unknown[],
@@ -16,6 +31,12 @@ export namespace FlowFunctionWith {
 			: never
 }
 
+/**
+ * Factory type that wraps callbacks into sync or async flow functions.
+ *
+ * @template M
+ * Flow execution mode.
+ */
 export type FlowFunctionWith<M extends 'sync' | 'async'> =
 	[M] extends [unknown]
 		? M extends 'sync'
@@ -23,6 +44,30 @@ export type FlowFunctionWith<M extends 'sync' | 'async'> =
 			: <R, A extends unknown[]>(func: (...args: A) => NonUndefinedAsync<R>) => FlowFunctionWith.Return<M, A, R>
 		: never
 
+/**
+ * Creates a wrapper for functions that should return flow results.
+ *
+ * @template M
+ * Flow execution mode.
+ *
+ * @param mode
+ * Sync or async mode used by wrapped functions.
+ *
+ * @returns
+ * Function wrapper for the selected mode.
+ *
+ * @example
+ * ```ts
+ * const wrapSync = FlowFunctionWith('sync')
+ * const readLength = wrapSync((value: string) => value.length)
+ * ```
+ *
+ * @example
+ * ```ts
+ * const wrapAsync = FlowFunctionWith('async')
+ * const readLength = wrapAsync(async (value: string) => value.length)
+ * ```
+ */
 export function FlowFunctionWith<M extends 'sync' | 'async'>(mode: M): FlowFunctionWith<M> {
 	return function (func: (...args: unknown[]) => unknown) {
 		return function (...args: unknown[]) {

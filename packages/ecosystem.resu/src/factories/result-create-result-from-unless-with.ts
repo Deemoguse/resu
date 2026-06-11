@@ -8,7 +8,22 @@ import type { ResultAnyOk } from '../operations/result-any-ok'
 import type { ResultAnyError } from '../operations/result-any-error'
 import type { NonUndefinedSync } from '../types/non-undefined-sync'
 
+/**
+ * Types for converting values unless they already have the opposite status.
+ */
 export namespace ResultFromUnlessWith {
+	/**
+	 * Result type produced by a status-preserving conversion.
+	 *
+	 * @template S
+	 * Requested status for non-opposite inputs.
+	 *
+	 * @template V
+	 * Source value or result type.
+	 *
+	 * @template T
+	 * Optional tag assigned when conversion is needed.
+	 */
 	export type Return<
 		S extends Result.Status,
 		V,
@@ -21,6 +36,12 @@ export namespace ResultFromUnlessWith {
 			: never
 }
 
+/**
+ * Function type for converting values while preserving opposite results.
+ *
+ * @template S
+ * Requested status for non-opposite inputs.
+ */
 export type ResultFromUnlessWith<
 	S extends Result.Status,
 > =
@@ -36,6 +57,33 @@ export type ResultFromUnlessWith<
 		)
 		: never
 
+/**
+ * Creates a converter that uses a status unless the source already has the opposite one.
+ *
+ * This is useful for helpers that should keep an existing failure or success
+ * while wrapping all other values into the requested status.
+ *
+ * @template S
+ * Requested status for non-opposite inputs.
+ *
+ * @param status
+ * Result status to bind.
+ *
+ * @returns
+ * Converter that preserves opposite results and wraps every other value.
+ *
+ * @example
+ * ```ts
+ * const OkUnlessError = ResultFromUnlessWith('ok')
+ * const result = OkUnlessError('ready', 'State')
+ * ```
+ *
+ * @example
+ * ```ts
+ * const ErrorUnlessOk = ResultFromUnlessWith('error')
+ * const result = ErrorUnlessOk(ResultOk({ tag: 'Ready', data: 1 }))
+ * ```
+ */
 export function ResultFromUnlessWith<
 	S extends Result.Status,
 >(

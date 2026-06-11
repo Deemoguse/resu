@@ -1,5 +1,17 @@
 import type { Result } from '../classes/result'
 
+/**
+ * Extracts result variants by status and optional tag from a union.
+ *
+ * @template V
+ * Source union to filter.
+ *
+ * @template S
+ * Result status to keep.
+ *
+ * @template T
+ * Optional tag to keep within the status.
+ */
 export type ResultExtract<
 	V,
 	S extends Result.Status,
