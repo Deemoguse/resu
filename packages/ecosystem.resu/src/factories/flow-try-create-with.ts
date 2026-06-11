@@ -5,7 +5,22 @@ import type { ResultAny } from '../operations/result-any'
 import type { NonUndefinedSync } from '../types/non-undefined-sync'
 import type { NonUndefinedAsync } from '../types/non-undefined-async'
 
+/**
+ * Types for sync and async flow try helpers.
+ */
 export namespace FlowTryWith {
+	/**
+	 * Result union produced by a flow try operation.
+	 *
+	 * @template T
+	 * Value returned by the try branch.
+	 *
+	 * @template C
+	 * Value returned by the catch branch.
+	 *
+	 * @template S
+	 * Whether abort signaling is required for the async operation.
+	 */
 	export type Return<
 		T,
 		C = never,
@@ -15,17 +30,44 @@ export namespace FlowTryWith {
 			? RuntimeError | (S extends true ? AbortError : never) | ResultOkFromUnlessError<T | C>
 			: never
 
+	/**
+	 * Object-form sync operation accepted by flow try.
+	 *
+	 * @template T
+	 * Value returned by the try branch.
+	 *
+	 * @template C
+	 * Value returned by the catch branch.
+	 */
 	export type SyncBranches<
 		T,
 		C = never,
 	> =
 		[T, C] extends [unknown, unknown]
 			? {
+				/**
+				 * Branch executed under synchronous flow try.
+				 */
 				try: () => NonUndefinedSync<T>
+				/**
+				 * Optional recovery branch for thrown errors.
+				 */
 				catch?: () => NonUndefinedSync<C>
 			}
 			: never
 
+	/**
+	 * Object-form async operation accepted by flow try.
+	 *
+	 * @template T
+	 * Value returned by the try branch.
+	 *
+	 * @template C
+	 * Value returned by the catch branch.
+	 *
+	 * @template S
+	 * Whether an abort signal is required.
+	 */
 	export type AsyncBranches<
 		T,
 		C = never,
@@ -33,37 +75,166 @@ export namespace FlowTryWith {
 	> =
 		[T, C, S] extends [unknown, unknown, unknown]
 			? S extends true ? {
+				/**
+				 * Required abort signal observed by the async operation.
+				 */
 				signal: AbortSignal
+				/**
+				 * Branch executed with the provided abort signal.
+				 */
 				try: (signal: AbortSignal) => NonUndefinedAsync<T>
+				/**
+				 * Optional recovery branch for rejected or thrown errors.
+				 */
 				catch?: (error: unknown) => NonUndefinedAsync<C>
 			} : {
+				/**
+				 * Optional abort signal observed by the async operation.
+				 */
 				signal?: AbortSignal
+				/**
+				 * Branch executed by async flow try.
+				 */
 				try: () => NonUndefinedAsync<T>
+				/**
+				 * Optional recovery branch for rejected or thrown errors.
+				 */
 				catch?: (error: unknown) => NonUndefinedAsync<C>
 			}
 			: never
 
+	/**
+	 * Runtime operation shape shared by sync and async implementations.
+	 */
 	export type Operations = (() => unknown) & {
+		/**
+		 * Optional signal used by async operations.
+		 */
 		signal?: AbortSignal
+		/**
+		 * Try branch callback.
+		 */
 		try?: (signal?: AbortSignal) => unknown
+		/**
+		 * Catch branch callback.
+		 */
 		catch?: (error: unknown) => unknown
 	}
 }
 
+/**
+ * Function type for sync or async flow try helpers.
+ *
+ * @template M
+ * Flow try execution mode.
+ */
 export type FlowTryWith<
 	M extends 'sync' | 'async',
 > =
 	[M] extends [unknown]
 		? M extends 'sync' ? {
+			/**
+			 * Executes an object-form synchronous operation.
+			 *
+			 * @template T
+			 * Value returned by the try branch.
+			 *
+			 * @template C
+			 * Value returned by the catch branch.
+			 *
+			 * @param operation
+			 * Sync operation branches.
+			 *
+			 * @returns
+			 * Flow result for the operation.
+			 */
 			<T, C = never> (operation: FlowTryWith.SyncBranches<T, C>): FlowTryWith.Return<T, C>
+			/**
+			 * Executes a callback-form synchronous operation.
+			 *
+			 * @template T
+			 * Value returned by the callback.
+			 *
+			 * @param operation
+			 * Sync callback to execute.
+			 *
+			 * @returns
+			 * Flow result for the callback.
+			 */
 			<T> (operation: () => NonUndefinedSync<T>): FlowTryWith.Return<T>
 		} : {
+			/**
+			 * Executes an object-form async operation with a required abort signal.
+			 *
+			 * @template T
+			 * Value returned by the try branch.
+			 *
+			 * @template C
+			 * Value returned by the catch branch.
+			 *
+			 * @param operation
+			 * Async operation branches with a required signal.
+			 *
+			 * @returns
+			 * Promise resolving to a flow result for the operation.
+			 */
 			<T, C = never> (operation: FlowTryWith.AsyncBranches<T, C, true>): Promise<FlowTryWith.Return<T, C, true>>
+			/**
+			 * Executes an object-form async operation.
+			 *
+			 * @template T
+			 * Value returned by the try branch.
+			 *
+			 * @template C
+			 * Value returned by the catch branch.
+			 *
+			 * @param operation
+			 * Async operation branches.
+			 *
+			 * @returns
+			 * Promise resolving to a flow result for the operation.
+			 */
 			<T, C = never> (operation: FlowTryWith.AsyncBranches<T, C>): Promise<FlowTryWith.Return<T, C>>
+			/**
+			 * Executes a callback-form async operation.
+			 *
+			 * @template T
+			 * Value returned by the callback.
+			 *
+			 * @param operation
+			 * Async-capable callback to execute.
+			 *
+			 * @returns
+			 * Promise resolving to a flow result for the callback.
+			 */
 			<T> (operation: () => NonUndefinedAsync<T>): Promise<FlowTryWith.Return<T>>
 		}
 		: never
 
+/**
+ * Creates a flow try helper for a sync or async execution mode.
+ *
+ * @template M
+ * Flow try execution mode.
+ *
+ * @param mode
+ * Execution mode to bind.
+ *
+ * @returns
+ * Flow try function for the selected mode.
+ *
+ * @example
+ * ```ts
+ * const TrySync = FlowTryWith('sync')
+ * const result = TrySync(() => 5)
+ * ```
+ *
+ * @example
+ * ```ts
+ * const TryAsync = FlowTryWith('async')
+ * const result = await TryAsync({ try: async () => 5, catch: () => 0 })
+ * ```
+ */
 export function FlowTryWith<M extends 'sync' | 'async'>(mode: M): FlowTryWith<M> {
 	return function (operation: FlowTryWith.Operations) {
 		const tryFn = operation.try || operation
@@ -98,11 +269,29 @@ export function FlowTryWith<M extends 'sync' | 'async'>(mode: M): FlowTryWith<M>
 	} as FlowTryWith<M>
 }
 
+/**
+ * Wraps an awaited value into a result.
+ *
+ * @param value
+ * Awaitable value to normalize.
+ *
+ * @returns
+ * Promise resolving to a result.
+ */
 async function promiseResultWrap(value: unknown): Promise<ResultAny> {
 	const res = await value
 	return ResultOkFromUnlessError(res)
 }
 
+/**
+ * Creates a cancellable abort result promise.
+ *
+ * @param signal
+ * Signal to observe for aborts.
+ *
+ * @returns
+ * Promise and cancellation callback for abort observation.
+ */
 function createAbortPromise(signal: AbortSignal): {
 	promise: Promise<AbortError<null>>
 	cancel: () => void
