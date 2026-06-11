@@ -14,21 +14,14 @@ export namespace InternalErrorWith {
 
 export type InternalErrorWith<T extends Result.Tag> = [T] extends [unknown]
 	? {
-		<E extends Error>(error: E): InternalErrorWith.Return<T, E>
 		(message: string): InternalErrorWith.Return<T, Error>
-		<D = null>(data: NonUndefinedSync<D>): InternalErrorWith.Return<T, D>
-		(): InternalErrorWith.Return<T, null>
+		<D = null>(data?: NonUndefinedSync<D>): InternalErrorWith.Return<T, D>
 	}
 	: never
 
 export function InternalErrorWith<T extends Result.Tag>(tag: T): InternalErrorWith<T> {
 	return function (data: unknown) {
-		const resolvedData = data instanceof Error
-			? data
-			: typeof data === 'string'
-				? new Error(data)
-				: data
-
+		const resolvedData = typeof data === 'string' ? new Error(data) : data
 		return ResultErrorFrom(resolvedData, tag)
 	} as InternalErrorWith<T>
 }
