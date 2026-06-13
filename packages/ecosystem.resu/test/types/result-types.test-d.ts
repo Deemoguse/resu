@@ -17,6 +17,7 @@ import type { ResultExtractOk } from '../../src/operations/result-extract-ok'
 import type { ResultIs } from '../../src/operations/result-is'
 import type { ResultIsError } from '../../src/operations/result-is-error'
 import type { ResultIsOk } from '../../src/operations/result-is-ok'
+import type { ErrorResult, FailureResult, OkResult, ReadyResult } from './_shared'
 
 const okTag = 'Ready' as const
 const errorTag = 'Failure' as const
@@ -24,21 +25,37 @@ const overrideTag = 'Override' as const
 const ok = ResultOk({ tag: okTag, data: 1 as number })
 const error = ResultError({ tag: errorTag, data: new Error('boom') })
 
-type Input =
-	| ResultOk<'Ready', number>
-	| ResultOk<null, boolean>
-	| ResultError<'Failure', Error>
-	| ResultError<null, string>
+type ReadyNumber = ReadyResult<number>
+type UntaggedBoolean = OkResult<boolean>
+type FailureError = FailureResult<Error>
+type UntaggedStringError = ErrorResult<string>
+type Input = ReadyNumber | UntaggedBoolean | FailureError | UntaggedStringError
 
-expectType<ResultOk<'Ready', number>>(ok)
-expectType<ResultError<'Failure', Error>>(error)
-expectType<ResultOk<null, null>>(ResultOk())
-expectType<ResultError<null, null>>(ResultError())
+type CreatedOk = OkResult<null>
+type CreatedError = ErrorResult<null>
+type OkFromError = ResultOk<'Failure', Error>
+type ErrorFromOk = ResultError<'Override', number>
+type OkUnlessError = FailureResult<Error>
+type ErrorUnlessOk = ReadyNumber
 
-expectType<ResultOk<'Failure', Error>>(ResultOkFrom(error))
-expectType<ResultError<'Override', number>>(ResultErrorFrom(ok, overrideTag))
-expectType<ResultError<'Failure', Error>>(ResultOkFromUnlessError(error, overrideTag))
-expectType<ResultOk<'Ready', number>>(ResultErrorFromUnlessOk(ok, overrideTag))
+type ExtractedOk = ReadyNumber | UntaggedBoolean
+type ExtractedFailure = FailureError
+type ExtractedReady = ReadyNumber
+type ExtractedUntaggedError = UntaggedStringError
+
+type WithoutReady = UntaggedBoolean | FailureError | UntaggedStringError
+type WithoutFailure = ReadyNumber | UntaggedBoolean | UntaggedStringError
+type WithoutUntaggedOk = ReadyNumber | FailureError | UntaggedStringError
+
+expectType<ReadyNumber>(ok)
+expectType<FailureError>(error)
+expectType<CreatedOk>(ResultOk())
+expectType<CreatedError>(ResultError())
+
+expectType<OkFromError>(ResultOkFrom(error))
+expectType<ErrorFromOk>(ResultErrorFrom(ok, overrideTag))
+expectType<OkUnlessError>(ResultOkFromUnlessError(error, overrideTag))
+expectType<ErrorUnlessOk>(ResultErrorFromUnlessOk(ok, overrideTag))
 
 expectAssignable<ResultAny>(ok)
 expectAssignable<ResultAny>(error)
@@ -47,18 +64,18 @@ expectAssignable<ResultAnyError>(error)
 expectNotAssignable<ResultAnyOk>(error)
 expectNotAssignable<ResultAnyError>(ok)
 
-expectType<ResultOk<'Ready', number> | ResultOk<null, boolean>>({} as ResultExtract<Input, 'ok'>)
-expectType<ResultError<'Failure', Error>>({} as ResultExtract<Input, 'error', 'Failure'>)
-expectType<ResultOk<'Ready', number>>({} as ResultExtractOk<Input, 'Ready'>)
-expectType<ResultError<null, string>>({} as ResultExtractError<Input, null>)
+expectType<ExtractedOk>({} as ResultExtract<Input, 'ok'>)
+expectType<ExtractedFailure>({} as ResultExtract<Input, 'error', 'Failure'>)
+expectType<ExtractedReady>({} as ResultExtractOk<Input, 'Ready'>)
+expectType<ExtractedUntaggedError>({} as ResultExtractError<Input, null>)
 
-expectType<ResultOk<null, boolean> | ResultError<'Failure', Error> | ResultError<null, string>>({} as ResultExclude<Input, 'ok', 'Ready'>)
-expectType<ResultOk<'Ready', number> | ResultOk<null, boolean> | ResultError<null, string>>({} as ResultExcludeError<Input, 'Failure'>)
-expectType<ResultOk<'Ready', number> | ResultError<'Failure', Error> | ResultError<null, string>>({} as ResultExcludeOk<Input, null>)
+expectType<WithoutReady>({} as ResultExclude<Input, 'ok', 'Ready'>)
+expectType<WithoutFailure>({} as ResultExcludeError<Input, 'Failure'>)
+expectType<WithoutUntaggedOk>({} as ResultExcludeOk<Input, null>)
 
-expectType<true>({} as ResultIs<ResultOk<'Ready', number>>)
+expectType<true>({} as ResultIs<ReadyNumber>)
 expectType<false>({} as ResultIs<number>)
-expectType<true>({} as ResultIsOk<ResultOk<'Ready', number>>)
-expectType<false>({} as ResultIsOk<ResultError<'Failure', number>>)
-expectType<true>({} as ResultIsError<ResultError<'Failure', number>>)
-expectType<false>({} as ResultIsError<ResultOk<'Ready', number>>)
+expectType<true>({} as ResultIsOk<ReadyNumber>)
+expectType<false>({} as ResultIsOk<FailureResult<number>>)
+expectType<true>({} as ResultIsError<FailureResult<number>>)
+expectType<false>({} as ResultIsError<ReadyNumber>)
