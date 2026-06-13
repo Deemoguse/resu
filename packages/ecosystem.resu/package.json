@@ -3,7 +3,10 @@
 	"name": "@wambata/resu",
 	"version": "0.0.1",
 	"type": "module",
-	"files": [ "dist", "./test/types/_entry.d.ts" ],
+	"files": [
+		"dist",
+		"./test/types/_entry.d.ts"
+	],
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.cts",
@@ -15,6 +18,10 @@
 		"./emitter": {
 			"import": "./dist/emitter.mjs",
 			"require": "./dist/emitter.cjs"
+		},
+		"./flow-checked": {
+			"import": "./dist/flow-checked.mjs",
+			"require": "./dist/flow-checked.cjs"
 		},
 		"./flow-function-async": {
 			"import": "./dist/flow-function-async.mjs",
@@ -143,6 +150,30 @@
 		"./runtime-unwrap-tagged-sync": {
 			"import": "./dist/runtime-unwrap-tagged-sync.mjs",
 			"require": "./dist/runtime-unwrap-tagged-sync.cjs"
+		},
+		"./utils-error-abort": {
+			"import": "./dist/utils-error-abort.mjs",
+			"require": "./dist/utils-error-abort.cjs"
+		},
+		"./utils-error-runtime": {
+			"import": "./dist/utils-error-runtime.mjs",
+			"require": "./dist/utils-error-runtime.cjs"
+		},
+		"./utils-non-empty-array": {
+			"import": "./dist/utils-non-empty-array.mjs",
+			"require": "./dist/utils-non-empty-array.cjs"
+		},
+		"./utils-non-undefined-async": {
+			"import": "./dist/utils-non-undefined-async.mjs",
+			"require": "./dist/utils-non-undefined-async.cjs"
+		},
+		"./utils-non-undefined-sync": {
+			"import": "./dist/utils-non-undefined-sync.mjs",
+			"require": "./dist/utils-non-undefined-sync.cjs"
+		},
+		"./utils-result-source": {
+			"import": "./dist/utils-result-source.mjs",
+			"require": "./dist/utils-result-source.cjs"
 		},
 		"./package.json": "./package.json"
 	},

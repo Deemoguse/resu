@@ -6,7 +6,7 @@ import { ResultErrorFrom } from '../operations/result-error-from'
 import type { Result } from '../classes/result'
 import type { ResultAnyOk } from '../operations/result-any-ok'
 import type { ResultAnyError } from '../operations/result-any-error'
-import type { NonUndefinedSync } from '../types/non-undefined-sync'
+import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
 
 /**
  * Types for converting values unless they already have the opposite status.
@@ -50,7 +50,7 @@ export type ResultFromUnlessWith<
 			V,
 			T extends Result.Tag,
 		> (
-			value: NonUndefinedSync<V>,
+			value: UtilsNonUndefinedSync<V>,
 			tag?: T,
 		) => (
 			ResultFromUnlessWith.Return<S, V, T>

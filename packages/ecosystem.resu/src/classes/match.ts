@@ -1,13 +1,14 @@
-import { RuntimeError } from '../errors/runtime-error'
+import { UtilsErrorRuntime } from '../utils/utils-error-runtime'
 import { FlowTrySync } from '../operations/flow-try-sync'
 import { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 import type { Result } from './result'
 import type { ResultAny } from '../operations/result-any'
-import type { NonUndefinedSync } from '../types/non-undefined-sync'
+import type { UtilsResultSource } from '../utils/utils-result-source'
+import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
+import type { UtilsNonAmptyArray } from '../utils/utils-non-empty-array'
 import type { ResultExclude } from '../operations/result-exclude'
 import type { ResultAnyError } from '../operations/result-any-error'
 import type { ResultExtract } from '../operations/result-extract'
-import type { NonAmptyArray } from '../types/non-empty-array'
 
 /**
  * Type helpers used by flow matching chains.
@@ -53,7 +54,7 @@ export namespace Match {
 	 */
 	export type Handler<R extends ResultAny = ResultAny, V = unknown> =
 		[R, V] extends [unknown, unknown]
-			? (result: R) => NonUndefinedSync<V>
+			? (result: R) => UtilsNonUndefinedSync<UtilsResultSource<V>>
 			: never
 
 	/**
@@ -114,7 +115,7 @@ export namespace Match {
 					T extends ResultExtract<L, S>['tag'],
 					V,
 				>(
-					tags: NonAmptyArray<T>,
+					tags: UtilsNonAmptyArray<T>,
 					handler: Handler<ResultExtract<L, S, T>, V>,
 				) => (
 					Match.Apply<K, Match.CalcResult<R, V>, Match.CalcLeft<S, L, T>>
@@ -458,7 +459,7 @@ export abstract class Match<
 			const store = this._createStore(this.store)
 			if (!store.usageError) tags.some((tag) => {
 				const alreadyExist = store[status].has(tag)
-				if (alreadyExist) return store.usageError = RuntimeError(`A handler is already defined for ${status}:${tag || 'null'}.`)
+				if (alreadyExist) return store.usageError = UtilsErrorRuntime(`A handler is already defined for ${status}:${tag || 'null'}.`)
 				else store[status].set(tag, handler as Match.Handler)
 			})
 
@@ -486,7 +487,7 @@ export abstract class Match<
 			const store = this._createStore(this.store)
 			if (!store.usageError) {
 				const alreadyExist = !!store[prop]
-				if (alreadyExist) return store.usageError = RuntimeError(`A handler is already defined for ${status}.`)
+				if (alreadyExist) return store.usageError = UtilsErrorRuntime(`A handler is already defined for ${status}.`)
 				else store[prop] = handler
 			}
 

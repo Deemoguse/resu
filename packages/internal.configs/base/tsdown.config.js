@@ -7,11 +7,11 @@ import { defineConfig, mergeConfig } from 'tsdown'
 /** @import { InlineConfig } from 'tsdown' */
 
 /**
- * @param {InlineConfig} [override]
- * @returns {UserConfig}
+ * @param {InlineConfig | InlineConfig[]} [override]
+ * @returns {UserConfig | UserConfig[]}
  */
 export function createConfig (override) {
-	const config = defineConfig({
+	const baseConfig = defineConfig({
 		entry: fromRoot('./src/index.ts'),
 		outDir: fromRoot(`./dist/`),
 
@@ -26,7 +26,9 @@ export function createConfig (override) {
 		exports: true,
 	})
 
-	return override ? mergeConfig(config, override) : config
+	return override
+		? [override].flat().map((config) => mergeConfig(baseConfig, config))
+		: baseConfig
 }
 
 /**

@@ -5,4 +5,4 @@
  * Item type stored in the tuple.
  */
 // eslint-disable-next-line @internal/inferization-type
-export type NonAmptyArray<T> = [T, ...T[]]
+export type UtilsNonAmptyArray<T> = [T, ...T[]]

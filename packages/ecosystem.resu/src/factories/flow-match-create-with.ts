@@ -1,5 +1,5 @@
 import { Match } from '../classes/match'
-import { RuntimeError } from '../errors/runtime-error'
+import { UtilsErrorRuntime } from '../utils/utils-error-runtime'
 import type { FlowTrySync } from '../operations/flow-try-sync'
 import type { ResultAny } from '../operations/result-any'
 
@@ -264,7 +264,7 @@ export class FlowMatchStrict<
 	public result(): FlowTrySync<R | L> {
 		const result = this.resolveResult((missmatch, result) => {
 			return missmatch
-				? RuntimeError('Non-exhaustive match. The current result variant was not handled.')
+				? UtilsErrorRuntime('Non-exhaustive match. The current result variant was not handled.')
 				: result
 		})
 		return result as FlowTrySync<R | L>

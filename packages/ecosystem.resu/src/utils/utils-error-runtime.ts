@@ -1,4 +1,4 @@
-import { InternalErrorWith } from '../factories/internal-create-error-with'
+import { UtilsCreateErrorWith } from '../factories/utils-create-error-with'
 import type { Result } from '../classes/result'
 
 /**
@@ -7,7 +7,7 @@ import type { Result } from '../classes/result'
  * @template D
  * Payload carried by the runtime error result.
  */
-export type RuntimeError<D = Result.AnyData> = [D] extends [unknown] ? InternalErrorWith.Return<'RuntimeError', D> : never
+export type UtilsErrorRuntime<D = Result.AnyData> = [D] extends [unknown] ? UtilsCreateErrorWith.Return<'RuntimeError', D> : never
 
 /**
  * Creates an error result tagged as `RuntimeError`.
@@ -28,4 +28,4 @@ export type RuntimeError<D = Result.AnyData> = [D] extends [unknown] ? InternalE
  * const result = RuntimeError({ reason: 'invalid-state' })
  * ```
  */
-export const RuntimeError: InternalErrorWith<'RuntimeError'> = InternalErrorWith('RuntimeError')
+export const UtilsErrorRuntime: UtilsCreateErrorWith<'RuntimeError'> = UtilsCreateErrorWith('RuntimeError')
