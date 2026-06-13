@@ -110,8 +110,7 @@ export class Result<P extends {
 	 * Mutable emitter set used by result construction.
 	 */
 	private static _getEmitterSet(): Set<Emitter> {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		const ctx = window || globalThis
+		const ctx = typeof window === 'undefined' ? globalThis : window
 		// @ts-expect-error eslint-disable-line @typescript-eslint/ban-ts-comment
 		return (ctx['__RESU_EMITTERS__'] ||= new Set()) as Set<Emitter>
 	}
