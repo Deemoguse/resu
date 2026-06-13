@@ -1,9 +1,11 @@
-import { AbortError } from '../errors/abort-error'
-import { RuntimeError } from '../errors/runtime-error'
+import { UtilsErrorAbort } from '../utils/utils-error-abort'
+import { UtilsErrorRuntime } from '../utils/utils-error-runtime'
 import { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 import type { ResultAny } from '../operations/result-any'
-import type { NonUndefinedSync } from '../types/non-undefined-sync'
-import type { NonUndefinedAsync } from '../types/non-undefined-async'
+import type { FlowChecked } from '../operations/flow-checked'
+import type { UtilsResultSource } from '../utils/utils-result-source'
+import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
+import type { UtilsNonUndefinedAsync } from '../utils/utils-non-undefined-async'
 
 /**
  * Types for sync and async flow try helpers.
@@ -27,7 +29,7 @@ export namespace FlowTryWith {
 		S extends boolean = false,
 	> =
 		[T, C, S] extends [unknown, unknown, unknown]
-			? RuntimeError | (S extends true ? AbortError : never) | ResultOkFromUnlessError<T | C>
+			? FlowChecked<(S extends true ? UtilsErrorAbort : never) | ResultOkFromUnlessError<T | C>>
 			: never
 
 	/**
@@ -48,11 +50,11 @@ export namespace FlowTryWith {
 				/**
 				 * Branch executed under synchronous flow try.
 				 */
-				try: () => NonUndefinedSync<T>
+				try: () => UtilsNonUndefinedSync<UtilsResultSource<T>>
 				/**
 				 * Optional recovery branch for thrown errors.
 				 */
-				catch?: () => NonUndefinedSync<C>
+				catch?: () => UtilsNonUndefinedSync<UtilsResultSource<C>>
 			}
 			: never
 
@@ -82,11 +84,11 @@ export namespace FlowTryWith {
 				/**
 				 * Branch executed with the provided abort signal.
 				 */
-				try: (signal: AbortSignal) => NonUndefinedAsync<T>
+				try: (signal: AbortSignal) => UtilsNonUndefinedAsync<UtilsResultSource<T>>
 				/**
 				 * Optional recovery branch for rejected or thrown errors.
 				 */
-				catch?: (error: unknown) => NonUndefinedAsync<C>
+				catch?: (error: unknown) => UtilsNonUndefinedAsync<UtilsResultSource<C>>
 			} : {
 				/**
 				 * Optional abort signal observed by the async operation.
@@ -95,11 +97,11 @@ export namespace FlowTryWith {
 				/**
 				 * Branch executed by async flow try.
 				 */
-				try: () => NonUndefinedAsync<T>
+				try: () => UtilsNonUndefinedAsync<UtilsResultSource<T>>
 				/**
 				 * Optional recovery branch for rejected or thrown errors.
 				 */
-				catch?: (error: unknown) => NonUndefinedAsync<C>
+				catch?: (error: unknown) => UtilsNonUndefinedAsync<UtilsResultSource<C>>
 			}
 			: never
 
@@ -161,7 +163,7 @@ export type FlowTryWith<
 			 * @returns
 			 * Flow result for the callback.
 			 */
-			<T> (operation: () => NonUndefinedSync<T>): FlowTryWith.Return<T>
+			<T> (operation: () => UtilsNonUndefinedSync<UtilsResultSource<T>>): FlowTryWith.Return<T>
 		} : {
 			/**
 			 * Executes an object-form async operation with a required abort signal.
@@ -207,7 +209,7 @@ export type FlowTryWith<
 			 * @returns
 			 * Promise resolving to a flow result for the callback.
 			 */
-			<T> (operation: () => NonUndefinedAsync<T>): Promise<FlowTryWith.Return<T>>
+			<T> (operation: () => UtilsNonUndefinedAsync<UtilsResultSource<T>>): Promise<FlowTryWith.Return<T>>
 		}
 		: never
 
@@ -238,22 +240,22 @@ export type FlowTryWith<
 export function FlowTryWith<M extends 'sync' | 'async'>(mode: M): FlowTryWith<M> {
 	return function (operation: FlowTryWith.Operations) {
 		const tryFn = operation.try || operation
-		const catchFn = operation.catch || RuntimeError
+		const catchFn = operation.catch || UtilsErrorRuntime
 		const signal = operation.signal
 
 		if (mode === 'sync') {
 			try { return ResultOkFromUnlessError(tryFn()) }
 			catch (error) {
 				try { return ResultOkFromUnlessError(catchFn(error)) }
-				catch (error) { return RuntimeError(error) }
+				catch (error) { return UtilsErrorRuntime(error) }
 			}
 		}
 		else if (signal?.aborted) {
-			return AbortError()
+			return UtilsErrorAbort()
 		}
 		else return new Promise<ResultAny>((res) => {
 			const tryFnPromise = (signal?: AbortSignal) => promiseResultWrap(Promise.resolve(signal).then(tryFn))
-			const catchFnPromise = (error?: unknown) => promiseResultWrap(Promise.resolve(error).then(catchFn)).catch(RuntimeError)
+			const catchFnPromise = (error?: unknown) => promiseResultWrap(Promise.resolve(error).then(catchFn)).catch(UtilsErrorRuntime)
 
 			if (signal) {
 				const abortPromise = createAbortPromise(signal)
@@ -293,15 +295,15 @@ async function promiseResultWrap(value: unknown): Promise<ResultAny> {
  * Promise and cancellation callback for abort observation.
  */
 function createAbortPromise(signal: AbortSignal): {
-	promise: Promise<AbortError<null>>
+	promise: Promise<UtilsErrorAbort<null>>
 	cancel: () => void
 } {
 	const internalAbort = new AbortController()
 	return {
-		promise: new Promise<AbortError<null>>((res) => {
-			if (signal.aborted) return res(AbortError())
+		promise: new Promise<UtilsErrorAbort<null>>((res) => {
+			if (signal.aborted) return res(UtilsErrorAbort())
 
-			const handler = () => res(AbortError())
+			const handler = () => res(UtilsErrorAbort())
 			const options = { once: true, signal: internalAbort.signal }
 			signal.addEventListener('abort', handler, options)
 		}),

@@ -1,4 +1,4 @@
-import { InternalErrorWith } from '../factories/internal-create-error-with'
+import { UtilsCreateErrorWith } from '../factories/utils-create-error-with'
 import type { Result } from '../classes/result'
 
 /**
@@ -7,7 +7,7 @@ import type { Result } from '../classes/result'
  * @template D
  * Payload carried by the abort error result.
  */
-export type AbortError<D = Result.AnyData> = [D] extends [unknown] ? InternalErrorWith.Return<'AbortError', D> : never
+export type UtilsErrorAbort<D = Result.AnyData> = [D] extends [unknown] ? UtilsCreateErrorWith.Return<'AbortError', D> : never
 
 /**
  * Creates an error result tagged as `AbortError`.
@@ -28,4 +28,4 @@ export type AbortError<D = Result.AnyData> = [D] extends [unknown] ? InternalErr
  * const result = AbortError({ reason: 'cancelled' })
  * ```
  */
-export const AbortError: InternalErrorWith<'AbortError'> = InternalErrorWith('AbortError')
+export const UtilsErrorAbort: UtilsCreateErrorWith<'AbortError'> = UtilsCreateErrorWith('AbortError')

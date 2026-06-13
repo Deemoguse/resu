@@ -12,7 +12,7 @@ import type { Result } from '../classes/result'
  */
 export type ResultOkFrom<
 	V,
-	T extends Result.Tag,
+	T extends Result.Tag = never,
 > =
 	[V, T] extends [unknown, unknown]
 		? ResultFromWith.Return<'ok', V, T>

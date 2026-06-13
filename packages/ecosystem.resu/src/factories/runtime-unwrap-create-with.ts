@@ -2,8 +2,8 @@ import { ResultIs } from '../operations/result-is'
 import { FlowTryAsync } from '../operations/flow-try-async'
 import { FlowTrySync } from '../operations/flow-try-sync'
 import type { ResultAny } from '../operations/result-any'
-import type { NonUndefinedSync } from '../types/non-undefined-sync'
-import type { NonUndefinedAsync } from '../types/non-undefined-async'
+import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
+import type { UtilsNonUndefinedAsync } from '../utils/utils-non-undefined-async'
 import type { ResultExtractOk } from '../operations/result-extract-ok'
 import type { ResultAnyOk } from '../operations/result-any-ok'
 
@@ -99,11 +99,11 @@ export type RuntimeUnwrapCreateWith<
 			 */
 			<V, R extends ResultAny>(
 				value: T1 extends 'async'
-					? NonUndefinedAsync<V>
-					: NonUndefinedSync<V>,
+					? UtilsNonUndefinedAsync<V>
+					: UtilsNonUndefinedSync<V>,
 				map: (value: V) => T1 extends 'async'
-					? NonUndefinedAsync<R>
-					: NonUndefinedSync<R>
+					? UtilsNonUndefinedAsync<R>
+					: UtilsNonUndefinedSync<R>
 			): (
 				RuntimeUnwrapCreateWith.Return<T1, T2, R>
 			)
@@ -122,8 +122,8 @@ export type RuntimeUnwrapCreateWith<
 			 */
 			<R extends ResultAny>(
 				result: T1 extends 'async'
-					? NonUndefinedAsync<R>
-					: NonUndefinedSync<R>
+					? UtilsNonUndefinedAsync<R>
+					: UtilsNonUndefinedSync<R>
 			): (
 				RuntimeUnwrapCreateWith.Return<T1, T2, R>
 			)
