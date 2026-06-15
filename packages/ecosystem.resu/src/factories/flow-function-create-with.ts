@@ -1,8 +1,6 @@
 import { FlowTrySync } from '../operations/flow-try-sync'
 import { FlowTryAsync } from '../operations/flow-try-async'
-import type { UtilsResultSource } from '../utils/utils-result-source'
-import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
-import type { UtilsNonUndefinedAsync } from '../utils/utils-non-undefined-async'
+import type { UtilsNonUndefinedSource } from '../utils/utils-non-undefined-source'
 
 /**
  * Types for wrapping functions into flow-safe functions.
@@ -41,8 +39,13 @@ export namespace FlowFunctionWith {
 export type FlowFunctionWith<M extends 'sync' | 'async'> =
 	[M] extends [unknown]
 		? M extends 'sync'
-			? <R, A extends unknown[]>(func: (...args: A) => UtilsNonUndefinedSync<UtilsResultSource<R>>) => FlowFunctionWith.Return<M, A, R>
-			: <R, A extends unknown[]>(func: (...args: A) => UtilsNonUndefinedAsync<UtilsResultSource<R>>) => FlowFunctionWith.Return<M, A, R>
+			? {
+				<R, A extends unknown[]>(func: (...args: A) => UtilsNonUndefinedSource<R>): FlowFunctionWith.Return<M, A, R>
+			}
+			: {
+				<R, A extends unknown[]>(func: (...args: A) => Promise<UtilsNonUndefinedSource<R>>): FlowFunctionWith.Return<M, A, R>
+				<R, A extends unknown[]>(func: (...args: A) => UtilsNonUndefinedSource<R>): FlowFunctionWith.Return<M, A, R>
+			}
 		: never
 
 /**

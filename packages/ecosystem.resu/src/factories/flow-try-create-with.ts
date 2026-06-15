@@ -3,9 +3,7 @@ import { UtilsErrorRuntime } from '../utils/utils-error-runtime'
 import { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 import type { ResultAny } from '../operations/result-any'
 import type { FlowChecked } from '../operations/flow-checked'
-import type { UtilsResultSource } from '../utils/utils-result-source'
-import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
-import type { UtilsNonUndefinedAsync } from '../utils/utils-non-undefined-async'
+import type { UtilsNonUndefinedSource } from '../utils/utils-non-undefined-source'
 
 /**
  * Types for sync and async flow try helpers.
@@ -50,11 +48,11 @@ export namespace FlowTryWith {
 				/**
 				 * Branch executed under synchronous flow try.
 				 */
-				try: () => UtilsNonUndefinedSync<UtilsResultSource<T>>
+				try: () => UtilsNonUndefinedSource<T>
 				/**
 				 * Optional recovery branch for thrown errors.
 				 */
-				catch?: () => UtilsNonUndefinedSync<UtilsResultSource<C>>
+				catch?: () => UtilsNonUndefinedSource<C>
 			}
 			: never
 
@@ -84,11 +82,11 @@ export namespace FlowTryWith {
 				/**
 				 * Branch executed with the provided abort signal.
 				 */
-				try: (signal: AbortSignal) => UtilsNonUndefinedAsync<UtilsResultSource<T>>
+				try: (signal: AbortSignal) => UtilsNonUndefinedSource<T> | Promise<UtilsNonUndefinedSource<T>>
 				/**
 				 * Optional recovery branch for rejected or thrown errors.
 				 */
-				catch?: (error: unknown) => UtilsNonUndefinedAsync<UtilsResultSource<C>>
+				catch?: (error: unknown) => UtilsNonUndefinedSource<C> | Promise<UtilsNonUndefinedSource<C>>
 			} : {
 				/**
 				 * Optional abort signal observed by the async operation.
@@ -97,11 +95,11 @@ export namespace FlowTryWith {
 				/**
 				 * Branch executed by async flow try.
 				 */
-				try: () => UtilsNonUndefinedAsync<UtilsResultSource<T>>
+				try: () => Promise<UtilsNonUndefinedSource<T>> | UtilsNonUndefinedSource<T>
 				/**
 				 * Optional recovery branch for rejected or thrown errors.
 				 */
-				catch?: (error: unknown) => UtilsNonUndefinedAsync<UtilsResultSource<C>>
+				catch?: (error: unknown) => Promise<UtilsNonUndefinedSource<C>> | UtilsNonUndefinedSource<C>
 			}
 			: never
 
@@ -163,7 +161,7 @@ export type FlowTryWith<
 			 * @returns
 			 * Flow result for the callback.
 			 */
-			<T> (operation: () => UtilsNonUndefinedSync<UtilsResultSource<T>>): FlowTryWith.Return<T>
+			<T> (operation: () => UtilsNonUndefinedSource<T>): FlowTryWith.Return<T>
 		} : {
 			/**
 			 * Executes an object-form async operation with a required abort signal.
@@ -209,7 +207,20 @@ export type FlowTryWith<
 			 * @returns
 			 * Promise resolving to a flow result for the callback.
 			 */
-			<T> (operation: () => UtilsNonUndefinedAsync<UtilsResultSource<T>>): Promise<FlowTryWith.Return<T>>
+			<T> (operation: () => Promise<UtilsNonUndefinedSource<T>>): Promise<FlowTryWith.Return<T>>
+			/**
+			 * Executes a callback-form sync operation.
+			 *
+			 * @template T
+			 * Value returned by the callback.
+			 *
+			 * @param operation
+			 * Sync-capable callback to execute.
+			 *
+			 * @returns
+			 * Promise resolving to a flow result for the callback.
+			 */
+			<T> (operation: () => UtilsNonUndefinedSource<T>): Promise<FlowTryWith.Return<T>>
 		}
 		: never
 

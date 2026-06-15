@@ -2,10 +2,9 @@ import { ResultIs } from '../operations/result-is'
 import { FlowTryAsync } from '../operations/flow-try-async'
 import { FlowTrySync } from '../operations/flow-try-sync'
 import type { ResultAny } from '../operations/result-any'
-import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
-import type { UtilsNonUndefinedAsync } from '../utils/utils-non-undefined-async'
-import type { ResultExtractOk } from '../operations/result-extract-ok'
 import type { ResultAnyOk } from '../operations/result-any-ok'
+import type { ResultExtractOk } from '../operations/result-extract-ok'
+import type { UtilsNonUndefined } from '../utils/utils-non-undefined'
 
 /**
  * Types for generator helpers that unwrap result values.
@@ -61,7 +60,6 @@ export namespace RuntimeUnwrapCreateWith {
 					: never
 				>
 			: never
-
 }
 
 /**
@@ -99,11 +97,11 @@ export type RuntimeUnwrapCreateWith<
 			 */
 			<V, R extends ResultAny>(
 				value: T1 extends 'async'
-					? UtilsNonUndefinedAsync<V>
-					: UtilsNonUndefinedSync<V>,
+					? UtilsNonUndefined<V> | Promise<UtilsNonUndefined<V>>
+					: UtilsNonUndefined<V>,
 				map: (value: V) => T1 extends 'async'
-					? UtilsNonUndefinedAsync<R>
-					: UtilsNonUndefinedSync<R>
+					? UtilsNonUndefined<R> | Promise<UtilsNonUndefined<R>>
+					: UtilsNonUndefined<R>
 			): (
 				RuntimeUnwrapCreateWith.Return<T1, T2, R>
 			)
@@ -122,8 +120,8 @@ export type RuntimeUnwrapCreateWith<
 			 */
 			<R extends ResultAny>(
 				result: T1 extends 'async'
-					? UtilsNonUndefinedAsync<R>
-					: UtilsNonUndefinedSync<R>
+					? UtilsNonUndefined<R> | Promise<UtilsNonUndefined<R>>
+					: UtilsNonUndefined<R>,
 			): (
 				RuntimeUnwrapCreateWith.Return<T1, T2, R>
 			)

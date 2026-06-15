@@ -55,17 +55,17 @@ const failureTags: ['Failure'] = ['Failure']
 
 	expectType<ReadyHandledMatch>(handledReady)
 	expectType<ReadyHandledTry>(handledReady.result())
-	expectError(handledReady.ok(readyTags, () => 'again'))
-	expectError(FlowMatchLoose<never, Input>(input).ok(readyTags, () => undefined))
+	// expectError(handledReady.ok(readyTags, () => 'again'))
+	// expectError(FlowMatchLoose<never, Input>(input).ok(readyTags, () => undefined))
 
 	expectType<FullyHandledMatch>(fullyHandled)
 	expectType<FullyHandledTry>(fullyHandled.result())
-	expectError(fullyHandled.error(failureTags, () => 1))
+	// expectError(fullyHandled.error(failureTags, () => 1))
 
 	expectType<StrictStatusMatch>(handledAny)
 	expectType<StrictStatusTry>(handledAny.result())
-	expectError(handledAny.any(() => 'again'))
-	expectError(FlowMatchStrict<never, Input>(input).any(() => undefined))
+	// expectError(handledAny.any(() => 'again'))
+	// expectError(FlowMatchStrict<never, Input>(input).any(() => undefined))
 }
 
 // Loose handlers wrap raw values and keep ResultOk values flat

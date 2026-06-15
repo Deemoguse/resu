@@ -8,8 +8,6 @@
 		"./test/types/_entry.d.ts"
 	],
 	"sideEffects": false,
-	"main": "./dist/index.cjs",
-	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.cts",
 	"exports": {
 		".": {
@@ -152,29 +150,29 @@
 			"import": "./dist/runtime-unwrap-tagged-sync.mjs",
 			"require": "./dist/runtime-unwrap-tagged-sync.cjs"
 		},
-		"./utils-error-abort": {
-			"import": "./dist/utils-error-abort.mjs",
-			"require": "./dist/utils-error-abort.cjs"
+		"./utils/utils-error-abort": {
+			"import": "./dist/utils/utils-error-abort.mjs",
+			"require": "./dist/utils/utils-error-abort.cjs"
 		},
-		"./utils-error-runtime": {
-			"import": "./dist/utils-error-runtime.mjs",
-			"require": "./dist/utils-error-runtime.cjs"
+		"./utils/utils-error-runtime": {
+			"import": "./dist/utils/utils-error-runtime.mjs",
+			"require": "./dist/utils/utils-error-runtime.cjs"
 		},
-		"./utils-non-empty-array": {
-			"import": "./dist/utils-non-empty-array.mjs",
-			"require": "./dist/utils-non-empty-array.cjs"
+		"./utils/utils-non-empty-array": {
+			"import": "./dist/utils/utils-non-empty-array.mjs",
+			"require": "./dist/utils/utils-non-empty-array.cjs"
 		},
-		"./utils-non-undefined-async": {
-			"import": "./dist/utils-non-undefined-async.mjs",
-			"require": "./dist/utils-non-undefined-async.cjs"
+		"./utils/utils-non-undefined": {
+			"import": "./dist/utils/utils-non-undefined.mjs",
+			"require": "./dist/utils/utils-non-undefined.cjs"
 		},
-		"./utils-non-undefined-sync": {
-			"import": "./dist/utils-non-undefined-sync.mjs",
-			"require": "./dist/utils-non-undefined-sync.cjs"
+		"./utils/utils-non-undefined-source": {
+			"import": "./dist/utils/utils-non-undefined-source.mjs",
+			"require": "./dist/utils/utils-non-undefined-source.cjs"
 		},
-		"./utils-result-source": {
-			"import": "./dist/utils-result-source.mjs",
-			"require": "./dist/utils-result-source.cjs"
+		"./utils/utils-source": {
+			"import": "./dist/utils/utils-source.mjs",
+			"require": "./dist/utils/utils-source.cjs"
 		},
 		"./package.json": "./package.json"
 	},
@@ -201,5 +199,7 @@
 			"composite": false,
 			"isolatedDeclarations": false
 		}
-	}
+	},
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs"
 }
