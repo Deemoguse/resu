@@ -23,8 +23,15 @@ export type UtilsSource<V> = [V] extends [unknown]
 				data: infer D extends Result.Data
 			}
 				? T extends null
+<<<<<<< Updated upstream
 					? D | ResultOkFrom<D>
 					: V
 				: V
 		: V | ResultOkFrom<V>
+=======
+					? D | ResultOkFrom<NoInfer<D>>
+					: V
+				: V
+		: V | ResultOkFrom<NoInfer<V>>
+>>>>>>> Stashed changes
 	: never
