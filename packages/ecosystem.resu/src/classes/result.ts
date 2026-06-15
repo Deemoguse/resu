@@ -1,6 +1,6 @@
-import type { ResultAny } from '../operations/result-any'
-import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
 import type { Emitter } from './emitter'
+import type { ResultAny } from '../operations/result-any'
+import type { UtilsNonUndefined } from '../utils/utils-non-undefined'
 
 /**
  * Describes the structural pieces shared by every result instance.
@@ -24,12 +24,12 @@ export namespace Result {
 	/**
 	 * Non-undefined tag shape used by broad result aliases.
 	 */
-	export type AnyTag = UtilsNonUndefinedSync<Tag>
+	export type AnyTag = UtilsNonUndefined<Tag>
 
 	/**
 	 * Non-undefined payload shape used by broad result aliases.
 	 */
-	export type AnyData = UtilsNonUndefinedSync<unknown>
+	export type AnyData = UtilsNonUndefined<unknown>
 
 	/**
 	 * Constructor parameters for a concrete result shape.
@@ -56,14 +56,14 @@ export namespace Result {
 				 *
 				 * @public
 				 */
-				tag?: UtilsNonUndefinedSync<P['tag']>
+				tag?: UtilsNonUndefined<P['tag']>
 
 				/**
 				 * Optional payload stored on the result.
 				 *
 				 * @public
 				 */
-				data?: UtilsNonUndefinedSync<P['data']>
+				data?: UtilsNonUndefined<P['data']>
 
 				/**
 				 * Optional emission override for result observers.
@@ -183,7 +183,7 @@ export class Result<P extends {
 	 *
 	 * @public
 	 */
-	public readonly data: UtilsNonUndefinedSync<P['data']>
+	public readonly data: UtilsNonUndefined<P['data']>
 
 	/**
 	 * Creates a result with the provided status, tag, payload, and emission option.
@@ -206,7 +206,7 @@ export class Result<P extends {
 	constructor(params: Result.Params<P>) {
 		this.status = params.status
 		this.tag = (params.tag ?? null)
-		this.data = (params.data ?? null) as UtilsNonUndefinedSync<P['data']>
+		this.data = (params.data ?? null) as UtilsNonUndefined<P['data']>
 
 		this._callEmit(params.emit)
 		return Object.freeze(this) as this

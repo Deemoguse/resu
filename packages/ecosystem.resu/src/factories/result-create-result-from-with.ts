@@ -2,7 +2,7 @@ import { Result } from '../classes/result'
 import { ResultOk } from '../operations/result-ok'
 import { ResultError } from '../operations/result-error'
 import { ResultIs } from '../operations/result-is'
-import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
+import type { UtilsNonUndefined } from '../utils/utils-non-undefined'
 
 /**
  * Types for converting values into results with a fixed status.
@@ -52,7 +52,7 @@ export type ResultFromWith<
 			V,
 			T extends Result.Tag = never,
 		> (
-			value: UtilsNonUndefinedSync<V>,
+			value: UtilsNonUndefined<V>,
 			tag?: T,
 		) => (
 			ResultFromWith.Return<S, V, T>

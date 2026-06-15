@@ -99,19 +99,19 @@ const catchFailure = (): CatchFailure => ResultErrorFrom('str' as FailureText)
 		catch: catchFailure,
 	})
 	const asyncCaught = FlowTryAsync<SuccessValue, CatchFailure>({
-		try: async (): Promise<SuccessValue> => 32,
-		catch: async (): Promise<CatchFailure> => catchFailure(),
+		try: async () => Promise.resolve(32),
+		catch: () => catchFailure(),
 	})
 
 	expectType<SyncWithCatch>(syncCaught)
 	expectType<AsyncWithCatch>(asyncCaught)
 	expectError(FlowTrySync<SuccessValue, CatchFailure>({
-		try: (): SuccessValue => 32,
-		catch: (): FailureText => 'str',
+		try: () => 32,
+		catch: () => 'str',
 	}))
 	expectError(FlowTryAsync<SuccessValue, CatchFailure>({
-		try: async (): Promise<SuccessValue> => 32,
-		catch: async (): Promise<FailureText> => 'str',
+		try: async () => 32,
+		catch: () => 'str',
 	}))
 }
 

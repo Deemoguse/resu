@@ -1,6 +1,6 @@
 import { ResultErrorFrom } from '../operations/result-error-from'
 import type { Result } from '../classes/result'
-import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
+import type { UtilsNonUndefined } from '../utils/utils-non-undefined'
 
 /**
  * Types for fixed-tag internal error constructors.
@@ -54,7 +54,7 @@ export type UtilsCreateErrorWith<T extends Result.Tag> = [T] extends [unknown]
 		 * @returns
 		 * Error result with the fixed tag and payload.
 		 */
-		<D = null>(data?: UtilsNonUndefinedSync<D>): UtilsCreateErrorWith.Return<T, D>
+		<D = null>(data?: UtilsNonUndefined<D>): UtilsCreateErrorWith.Return<T, D>
 	}
 	: never
 

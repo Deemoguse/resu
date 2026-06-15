@@ -3,12 +3,11 @@ import { FlowTrySync } from '../operations/flow-try-sync'
 import { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 import type { Result } from './result'
 import type { ResultAny } from '../operations/result-any'
-import type { UtilsResultSource } from '../utils/utils-result-source'
-import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
-import type { UtilsNonAmptyArray } from '../utils/utils-non-empty-array'
-import type { ResultExclude } from '../operations/result-exclude'
 import type { ResultAnyError } from '../operations/result-any-error'
+import type { ResultExclude } from '../operations/result-exclude'
 import type { ResultExtract } from '../operations/result-extract'
+import type { UtilsNonAmptyArray } from '../utils/utils-non-empty-array'
+import type { UtilsNonUndefinedSource } from '../utils/utils-non-undefined-source'
 
 /**
  * Type helpers used by flow matching chains.
@@ -54,7 +53,7 @@ export namespace Match {
 	 */
 	export type Handler<R extends ResultAny = ResultAny, V = unknown> =
 		[R, V] extends [unknown, unknown]
-			? (result: R) => UtilsNonUndefinedSync<UtilsResultSource<V>>
+			? (result: R) => UtilsNonUndefinedSource<V>
 			: never
 
 	/**
@@ -417,7 +416,7 @@ export abstract class Match<
 			const handler = this.store[status].get(tag) || this.store[`${status}Any`] || this.store.any
 
 			const result = FlowTrySync(() => ResultOkFromUnlessError(handler ? handler(this.inputResult) : this.inputResult))
-			return cb(!handler, result)
+			return cb(!handler, result) as ResultAny // eslint-disable-line @typescript-eslint/no-unnecessary-type-assertion
 		})
 
 		return result as FlowTrySync<R1>

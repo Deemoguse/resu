@@ -1,22 +1,22 @@
 /**
- * Value source type accepted by flow callbacks before result normalization.
+ * Flow callback source type accepted before result normalization.
  */
-export type { UtilsResultSource as UtilsResultSource } from '../../utils/utils-result-source'
+export type { UtilsSource as Source } from '../../utils/utils-source'
+
+/**
+ * Non-promise flow callback source type without `undefined` or `void`.
+ */
+export type { UtilsNonUndefinedSource as NonUndefinedSource } from '../../utils/utils-non-undefined-source'
 
 /**
  * Tuple type that requires at least one item.
  */
-export type { UtilsNonAmptyArray as UtilsNonAmptyArray } from '../../utils/utils-non-empty-array'
+export type { UtilsNonAmptyArray as NonAmptyArray } from '../../utils/utils-non-empty-array'
 
 /**
- * Synchronous value type excluding `undefined` and `void`.
+ * Value type without `undefined` or `void`.
  */
-export type { UtilsNonUndefinedSync as NonUndefinedSync } from '../../utils/utils-non-undefined-sync'
-
-/**
- * Async-capable value type excluding `undefined` and `void`.
- */
-export type { UtilsNonUndefinedAsync as NonUndefinedAsync } from '../../utils/utils-non-undefined-async'
+export type { UtilsNonUndefined as NonUndefined } from '../../utils/utils-non-undefined'
 
 /**
  * Abort error result constructor and type.

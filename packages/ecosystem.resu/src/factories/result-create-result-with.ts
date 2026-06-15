@@ -1,5 +1,5 @@
 import { Result } from '../classes/result'
-import type { UtilsNonUndefinedSync } from '../utils/utils-non-undefined-sync'
+import type { UtilsNonUndefined } from '../utils/utils-non-undefined'
 
 /**
  * Types for status-specific result constructors.
@@ -23,11 +23,11 @@ export declare namespace ResultWith {
 				/**
 				 * Optional tag assigned to the result.
 				 */
-				tag?: UtilsNonUndefinedSync<T>
+				tag?: UtilsNonUndefined<T>
 				/**
 				 * Optional payload assigned to the result.
 				 */
-				data?: UtilsNonUndefinedSync<D>
+				data?: UtilsNonUndefined<D>
 				/**
 				 * Optional logging flag kept for constructor compatibility.
 				 */
