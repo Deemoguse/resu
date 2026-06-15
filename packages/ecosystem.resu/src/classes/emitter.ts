@@ -104,7 +104,7 @@ export class Emitter {
 	 * @param options
 	 * Emission options for ok and error results.
 	 */
-	private constructor(options: Emitter.Options) {
+	constructor(options: Emitter.Options) {
 		if (options.emitOk) this.emitOk = this._emitPredicate(options.emitOk)
 		if (options.emitError) this.emitError = this._emitPredicate(options.emitError)
 	}
