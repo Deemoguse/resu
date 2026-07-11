@@ -27,7 +27,7 @@ export namespace Result {
 	export type AnyTag = UtilsNonUndefined<Tag>
 
 	/**
-	 * Non-undefined payload shape used by broad result aliases.
+	 * Broad payload shape used by result aliases.
 	 */
 	export type AnyData = UtilsNonUndefined<unknown>
 
@@ -66,7 +66,10 @@ export namespace Result {
 				data?: UtilsNonUndefined<P['data']>
 
 				/**
-				 * Optional emission override for result observers.
+				 * Optional override for result emission.
+				 *
+				 * `true` forces emission, `false` suppresses it, and omission uses
+				 * the emitter predicate for the result status.
 				 *
 				 * @public
 				 */
@@ -162,6 +165,7 @@ export class Result<P extends {
 	public static deleteEmmiter(emmiter: Emitter): void {
 		const emmiters = this._getEmitterSet()
 		if (!emmiters.has(emmiter)) return
+
 		emmiters.delete(emmiter)
 		emmiter.offAll()
 	}
@@ -197,7 +201,7 @@ export class Result<P extends {
 	 * Creates a result with the provided status, tag, payload, and emission option.
 	 *
 	 * @param params
-	 * Result fields and optional emission behavior.
+	 * Result fields and optional emission override.
 	 *
 	 * @example
 	 * ```ts
@@ -224,7 +228,8 @@ export class Result<P extends {
 	 * Notifies registered emitters about this result when emission is allowed.
 	 *
 	 * @param emit
-	 * Optional override for default emission behavior.
+	 * `true` forces emission, `false` suppresses it, and omission uses the
+	 * emitter predicate for the result status.
 	 *
 	 * @returns
 	 * Nothing.
@@ -232,9 +237,11 @@ export class Result<P extends {
 	private _callEmit(emit?: boolean): void {
 		const emmiters = Result._getEmitterSet()
 		emmiters.forEach((emmiter) => {
-			const allow = emit ?? this.status === 'ok'
-				? emmiter.emitOk?.(this as ResultAny)
-				: emmiter.emitError?.(this as ResultAny)
+			const allow = emit ?? (
+				this.status === 'ok'
+					? emmiter.emitOk?.(this as ResultAny)
+					: emmiter.emitError?.(this as ResultAny)
+			)
 
 			if (allow) emmiter.emit(this as ResultAny)
 		})

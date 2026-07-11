@@ -22,7 +22,7 @@ export type ResultError<
  * Creates an `error` result.
  *
  * @param params
- * Optional tag, payload, and emission options for the result.
+ * Optional tag, payload, and emission override for the result.
  *
  * @returns
  * Immutable result with `error` status.

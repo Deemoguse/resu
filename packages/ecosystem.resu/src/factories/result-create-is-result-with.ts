@@ -39,7 +39,9 @@ export type IsResultWith<
 	S extends 'any' | Result.Status,
 > =
 	[S] extends [unknown]
-		? (value: unknown) => value is S extends 'ok' ? ResultAnyOk : ResultAnyError
+		? (value: unknown) => value is S extends 'any'
+			? ResultAny
+			: S extends 'ok' ? ResultAnyOk : ResultAnyError
 		: never
 
 /**
@@ -67,7 +69,7 @@ export type IsResultWith<
  * ```
  */
 export function IsResultWith<S extends 'any' | Result.Status>(status: S): IsResultWith<S> {
-	return (value): value is S extends 'ok' ? ResultAnyOk : ResultAnyError => {
+	return (value): value is S extends 'any' ? ResultAny : S extends 'ok' ? ResultAnyOk : ResultAnyError => {
 		const isResultInstance = value instanceof Result
 		if (!isResultInstance) return false
 

@@ -133,6 +133,7 @@ export type RuntimeUnwrapCreateWith<
  *
  * The returned helper yields a result to the runtime and gives either the
  * result payload or `{ tag, data }` back to `yield*`.
+ * Errors thrown or rejected by a mapper are yielded as `RuntimeError` results.
  *
  * @template T1
  * Runtime execution mode.

@@ -2,13 +2,13 @@ import { ResultFromUnlessWith } from '../factories/result-create-result-from-unl
 import type { Result } from '../classes/result'
 
 /**
- * `ok` result from a value unless the value is already an error result.
+ * Result produced as `ok` unless the source is an `error` result.
  *
  * @template V
  * Source value or result type.
  *
  * @template T
- * Optional tag assigned when an ok result is created.
+ * Optional tag assigned to an `ok` result and ignored for an `error` source.
  */
 export type ResultOkFromUnlessError<
 	V,
@@ -19,16 +19,18 @@ export type ResultOkFromUnlessError<
 		: never
 
 /**
- * Creates an `ok` result unless the input is already an `error` result.
+ * Creates a new `ok` result unless the source is an `error` result.
+ *
+ * An `error` source produces a new result with the source status, tag, and data.
  *
  * @param value
  * Source value or result to normalize.
  *
  * @param tag
- * Optional tag assigned when an `ok` result is created.
+ * Optional tag assigned to an `ok` result and ignored for an `error` source.
  *
  * @returns
- * Existing error payload as an error result, or a new `ok` result.
+ * New `error` result retaining source fields, or a new `ok` result.
  *
  * @example
  * ```ts

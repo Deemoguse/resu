@@ -18,7 +18,7 @@ export namespace ResultFromWith {
 	 * Source value or result type.
 	 *
 	 * @template T
-	 * Optional tag override.
+	 * Optional tag override, including `null`.
 	 */
 	export type Return<
 		S extends Result.Status,
@@ -63,7 +63,7 @@ export type ResultFromWith<
  * Creates a converter that wraps values into results with a fixed status.
  *
  * If the source is already a result, the converter keeps its payload and tag
- * unless a new tag is provided.
+ * unless a new tag, including `null`, is provided.
  *
  * @template S
  * Status assigned to every produced result.
@@ -98,7 +98,7 @@ export function ResultFromWith<
 	return function (value, tag) {
 		const contructor = status === 'ok' ? ResultOk : ResultError
 		return ResultIs(value)
-			? contructor({ data: value.data, tag: tag ?? value.tag })
+			? contructor({ data: value.data, tag: tag === undefined ? value.tag : tag })
 			: contructor({ data: value, tag: tag })
 	} as ResultFromWith<S>
 }

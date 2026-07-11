@@ -2,10 +2,10 @@ import { Result } from '../classes/result'
 import type { Emitter } from '../classes/emitter'
 
 /**
- * Unregisters an emitter from result construction events.
+ * Unregisters an emitter and removes all listeners attached to it.
  *
  * @param emmiter
- * Emitter instance to unregister.
+ * Emitter instance to unregister and clear.
  *
  * @example
  * ```ts

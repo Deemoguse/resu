@@ -6,12 +6,12 @@ import type { ResultOkFromUnlessError } from '../operations/result-ok-from-unles
 /**
  * Flow callback source type accepted before result normalization.
  *
- * Plain values may be returned directly or as ok results, existing error
- * results stay on the error branch, and untagged ok results may be supplied as
- * either the result itself or its raw data.
+ * Plain values may be supplied directly or wrapped in an `ok` result.
+ * Existing `error` results and tagged `ok` results are preserved, while an
+ * untagged `ok` result is represented through the accepted forms of its data.
  *
  * @template V
- * Declared value or result type produced by the callback.
+ * Declared source type produced by the callback.
  */
 export type UtilsSource<V> = [V] extends [unknown]
 	? V extends ResultAny

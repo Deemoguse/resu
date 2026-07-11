@@ -9,11 +9,11 @@ import type { ResultAnyError } from '../operations/result-any-error'
 import type { UtilsNonUndefined } from '../utils/utils-non-undefined'
 
 /**
- * Types for converting values unless they already have the opposite status.
+ * Types for converting values while retaining an opposite result status.
  */
 export namespace ResultFromUnlessWith {
 	/**
-	 * Result type produced by a status-preserving conversion.
+	 * Result type produced by an opposite-status-preserving conversion.
 	 *
 	 * @template S
 	 * Requested status for non-opposite inputs.
@@ -37,7 +37,7 @@ export namespace ResultFromUnlessWith {
 }
 
 /**
- * Function type for converting values while preserving opposite results.
+ * Function type for converting values while retaining opposite result fields.
  *
  * @template S
  * Requested status for non-opposite inputs.
@@ -60,8 +60,9 @@ export type ResultFromUnlessWith<
 /**
  * Creates a converter that uses a status unless the source already has the opposite one.
  *
- * This is useful for helpers that should keep an existing failure or success
- * while wrapping all other values into the requested status.
+ * An input with the opposite status produces a new result with the same status,
+ * tag, and data; the supplied tag is ignored. Every other input is converted
+ * to the requested status.
  *
  * @template S
  * Requested status for non-opposite inputs.
@@ -70,7 +71,7 @@ export type ResultFromUnlessWith<
  * Result status to bind.
  *
  * @returns
- * Converter that preserves opposite results and wraps every other value.
+ * Converter that retains opposite result fields and wraps every other value.
  *
  * @example
  * ```ts

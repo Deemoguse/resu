@@ -15,19 +15,19 @@ export type UtilsErrorAbort<D = Result.AnyData> = [D] extends [unknown]
  * Creates an error result tagged as `AbortError`.
  *
  * @param data
- * Optional payload to place into the result.
+ * Optional error message converted into an `Error`, or custom payload stored unchanged.
  *
  * @returns
- * Abort error result with the provided payload.
+ * Abort error result with an `Error` for a string input or the provided payload.
  *
  * @example
  * ```ts
- * const result = AbortError()
+ * const result = UtilsErrorAbort()
  * ```
  *
  * @example
  * ```ts
- * const result = AbortError({ reason: 'cancelled' })
+ * const result = UtilsErrorAbort({ reason: 'cancelled' })
  * ```
  */
 export const UtilsErrorAbort: UtilsCreateErrorWith<'AbortError'> = UtilsCreateErrorWith('AbortError')

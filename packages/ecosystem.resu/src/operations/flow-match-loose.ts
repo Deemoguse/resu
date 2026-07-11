@@ -21,7 +21,8 @@ export type FlowMatchLoose<
 /**
  * Creates a loose result match chain.
  *
- * Unmatched results are returned unchanged when the chain is evaluated.
+ * An unmatched result is normalized into a new result with the same status,
+ * tag, and data when the chain is evaluated.
  *
  * @param result
  * Result value to match.

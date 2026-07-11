@@ -14,7 +14,7 @@ export type { UtilsNonUndefinedSource as NonUndefinedSource } from '../../utils/
 export type { UtilsNonAmptyArray as NonAmptyArray } from '../../utils/utils-non-empty-array'
 
 /**
- * Value type without `undefined` or `void`.
+ * Removes `undefined` and `void` from concrete value types.
  */
 export type { UtilsNonUndefined as NonUndefined } from '../../utils/utils-non-undefined'
 

@@ -1,5 +1,5 @@
 /**
- * Creates error results while preserving existing ok results.
+ * Creates error results while retaining the fields of ok inputs.
  */
 export { ResultErrorFromUnlessOk as ErrorFromUnlessOk } from '../../operations/result-error-from-unless-ok'
 
@@ -29,7 +29,7 @@ export { ResultIsError as IsError } from '../../operations/result-is-error'
 export { ResultIsOk as IsOk } from '../../operations/result-is-ok'
 
 /**
- * Creates ok results while preserving existing error results.
+ * Creates ok results while retaining the fields of error inputs.
  */
 export { ResultOkFromUnlessError as OkFromUnlessError } from '../../operations/result-ok-from-unless-error'
 

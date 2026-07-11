@@ -9,6 +9,6 @@ export { Emitter } from '../../classes/emitter'
 export { ResultEmittersAdd as Add } from '../../operations/result-emitters-add'
 
 /**
- * Unregisters an emitter from result construction events.
+ * Unregisters an emitter and removes all listeners attached to it.
  */
 export { ResultEmittersDelete as Delete } from '../../operations/result-emitters-delete'
