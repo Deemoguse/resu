@@ -75,6 +75,10 @@ export namespace Result {
 			: never
 }
 
+// Internal nominal type marker used to distinguish `Result`
+// from structurally compatible types:
+const ResultSymbol = Symbol.for('__RESU_RESULT_KEY__')
+
 /**
  * Immutable container for an `ok` or `error` result value.
  *
@@ -163,6 +167,10 @@ export class Result<P extends {
 	}
 
 	// ---------------------------------------------------------------------
+
+	// Internal nominal type marker used to distinguish `Result`
+	// from structurally compatible types.
+	public readonly [ResultSymbol] = ResultSymbol
 
 	/**
 	 * Status carried by this result.
