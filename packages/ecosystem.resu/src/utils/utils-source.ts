@@ -1,7 +1,7 @@
 import type { Result } from '../classes/result'
 import type { ResultAny } from '../operations/result-any'
 import type { ResultAnyError } from '../operations/result-any-error'
-import type { ResultOkFrom } from '../operations/result-ok-from'
+import type { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 
 /**
  * Flow callback source type accepted before result normalization.
@@ -17,14 +17,14 @@ export type UtilsSource<V> = [V] extends [unknown]
 	? V extends ResultAny
 		? V extends ResultAnyError
 			? V
-			: V extends {
+			: V extends Result<{
 				status: 'ok'
 				tag: infer T extends Result.Tag
 				data: infer D extends Result.Data
-			}
+			}>
 				? T extends null
-					? D | ResultOkFrom<NoInfer<D>>
+					? D | ResultOkFromUnlessError<NoInfer<D>>
 					: V
 				: V
-		: V | ResultOkFrom<NoInfer<V>>
+		: V | ResultOkFromUnlessError<NoInfer<V>>
 	: never

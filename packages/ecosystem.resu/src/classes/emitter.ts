@@ -65,13 +65,13 @@ export namespace Emitter {
  *
  * @example
  * ```ts
- * declare const emitter: Emitter
+ * const emitter = new Emitter()
  * const off = emitter.on((result) => result.status)
  * ```
  *
  * @example
  * ```ts
- * declare const emitter: Emitter
+ * const emitter = new Emitter()
  * emitter.on((result, off) => {
  * 	if (result.status === 'error') off()
  * })
@@ -121,13 +121,13 @@ export class Emitter {
 	 *
 	 * @example
 	 * ```ts
-	 * declare const emitter: Emitter
+	 * const emitter = new Emitter()
 	 * const off = emitter.on((result) => result.status)
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * declare const emitter: Emitter
+	 * const emitter = new Emitter()
 	 * emitter.on((result, off) => {
 	 * 	if (result.status === 'ok') off()
 	 * })
@@ -138,7 +138,7 @@ export class Emitter {
 		const adapter = (event: CustomEvent<ResultAny>) => handler(event.detail, off)
 
 		this._listeners.set(handler, adapter)
-		this._target.addEventListener('@', (event) => adapter(event as CustomEvent<ResultAny>))
+		this._target.addEventListener('emit', (event) => adapter(event as CustomEvent<ResultAny>))
 
 		return off
 	}
@@ -151,14 +151,14 @@ export class Emitter {
 	 *
 	 * @example
 	 * ```ts
-	 * declare const emitter: Emitter
+	 * const emitter = new Emitter()
 	 * const off = emitter.on(() => undefined)
 	 * off?.()
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * declare const emitter: Emitter
+	 * const emitter = new Emitter()
 	 * const handler = (result: ResultAny) => result.status
 	 * emitter.on(handler)
 	 * emitter.off(handler)
@@ -166,7 +166,7 @@ export class Emitter {
 	 */
 	public off(handler: Emitter.Handler<'off'>): void {
 		const adapter = this._listeners.get(handler)
-		if (adapter) this._target.removeEventListener('@', adapter)
+		if (adapter) this._target.removeEventListener('emit', adapter)
 	}
 
 	/**
@@ -174,13 +174,13 @@ export class Emitter {
 	 *
 	 * @example
 	 * ```ts
-	 * declare const emitter: Emitter
+	 * const emitter = new Emitter()
 	 * emitter.offAll()
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * declare const emitter: Emitter
+	 * const emitter = new Emitter()
 	 * emitter.on(() => undefined)
 	 * emitter.offAll()
 	 * ```
@@ -197,13 +197,13 @@ export class Emitter {
 	 *
 	 * @example
 	 * ```ts
-	 * declare const emitter: Emitter
+	 * const emitter = new Emitter()
 	 * emitter.emit(ResultOk({ data: 1 }))
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * declare const emitter: Emitter
+	 * const emitter = new Emitter()
 	 * emitter.emit(ResultError({ tag: 'Failure', data: 'broken' }))
 	 * ```
 	 */
