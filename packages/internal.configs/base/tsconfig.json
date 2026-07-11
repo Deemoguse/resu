@@ -12,13 +12,12 @@
 		"moduleResolution": "bundler",
 
 		"isolatedModules": true,
-		"isolatedDeclarations": true,
 		"verbatimModuleSyntax": true,
 		"erasableSyntaxOnly": true,
 		"noUncheckedIndexedAccess": true,
 
 		"baseUrl": "${configDir}",
-		"paths": { "@/*": ["./*"]}
+		"paths": { "@/*": ["./*"] }
 	},
 
 	"include": ["${configDir}/src"],

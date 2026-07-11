@@ -7,7 +7,9 @@ import type { Result } from '../classes/result'
  * @template D
  * Payload carried by the runtime error result.
  */
-export type UtilsErrorRuntime<D = Result.AnyData> = [D] extends [unknown] ? UtilsCreateErrorWith.Return<'RuntimeError', D> : never
+export type UtilsErrorRuntime<D = Result.AnyData> = [D] extends [unknown]
+	? UtilsCreateErrorWith.Return<'RuntimeError', D>
+	: never
 
 /**
  * Creates an error result tagged as `RuntimeError`.

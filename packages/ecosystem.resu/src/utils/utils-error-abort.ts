@@ -7,7 +7,9 @@ import type { Result } from '../classes/result'
  * @template D
  * Payload carried by the abort error result.
  */
-export type UtilsErrorAbort<D = Result.AnyData> = [D] extends [unknown] ? UtilsCreateErrorWith.Return<'AbortError', D> : never
+export type UtilsErrorAbort<D = Result.AnyData> = [D] extends [unknown]
+	? UtilsCreateErrorWith.Return<'AbortError', D>
+	: never
 
 /**
  * Creates an error result tagged as `AbortError`.
