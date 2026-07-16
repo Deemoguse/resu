@@ -1,5 +1,6 @@
 import { RuntimeUnwrapCreateWith } from '../factories/runtime-unwrap-create-with'
 import type { ResultAny } from './result-any'
+import { ResultOkFrom } from './result-ok-from'
 
 /**
  * Synchronous generator that yields a result and returns its payload.
