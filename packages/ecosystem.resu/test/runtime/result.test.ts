@@ -37,6 +37,13 @@ describe('result from value helpers', () => {
 		expectErrorResult(ResultErrorFrom(source, 'New'), 'New')
 		expect(ResultErrorFrom(source, 'New').data).toBe(5)
 	})
+
+	it('uses null as an explicit tag override', () => {
+		const source = ResultError({ tag: 'Failure', data: 'broken' })
+		const result = ResultOkFrom(source, null)
+
+		expectOkResult(result, { tag: null, data: 'broken' })
+	})
 })
 
 describe('result from unless helpers', () => {

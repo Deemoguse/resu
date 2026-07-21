@@ -49,7 +49,7 @@ export type UtilsCreateErrorWith<T extends Result.Tag> = [T] extends [unknown]
 		 * Payload type carried by the error result.
 		 *
 		 * @param data
-		 * Optional custom payload.
+		 * Optional custom payload stored without conversion.
 		 *
 		 * @returns
 		 * Error result with the fixed tag and payload.
@@ -72,13 +72,13 @@ export type UtilsCreateErrorWith<T extends Result.Tag> = [T] extends [unknown]
  *
  * @example
  * ```ts
- * const ValidationError = InternalErrorWith('ValidationError')
+ * const ValidationError = UtilsCreateErrorWith('ValidationError')
  * const result = ValidationError('Invalid payload')
  * ```
  *
  * @example
  * ```ts
- * const AbortLikeError = InternalErrorWith('AbortLikeError')
+ * const AbortLikeError = UtilsCreateErrorWith('AbortLikeError')
  * const result = AbortLikeError({ reason: 'cancelled' })
  * ```
  */

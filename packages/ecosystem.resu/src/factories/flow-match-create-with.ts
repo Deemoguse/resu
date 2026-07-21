@@ -116,7 +116,7 @@ export function FlowMatchWith<
 }
 
 /**
- * Loose match chain that leaves unmatched results unchanged.
+ * Loose match chain that retains the fields of unmatched results.
  *
  * @template R
  * Accumulated result type produced by handlers.
@@ -171,7 +171,8 @@ export class FlowMatchLoose<
 	 * Evaluates a loose match chain.
 	 *
 	 * @returns
-	 * Handler result when matched, otherwise the original input result.
+	 * Handler result when matched, otherwise a normalized result with the input
+	 * status, tag, and data.
 	 *
 	 * @example
 	 * ```ts

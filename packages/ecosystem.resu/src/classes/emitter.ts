@@ -59,19 +59,18 @@ export namespace Emitter {
  * Event-style dispatcher used by result emission helpers.
  *
  * Emitter instances subscribe to result events and can be registered with the
- * result emitter operations. The constructor is private in the public type
- * surface, so consumers normally receive or create instances through package
- * integration code.
+ * result emitter operations. Constructor options select which result statuses
+ * are emitted automatically after result construction.
  *
  * @example
  * ```ts
- * const emitter = new Emitter()
+ * const emitter = new Emitter({ emitOk: true })
  * const off = emitter.on((result) => result.status)
  * ```
  *
  * @example
  * ```ts
- * const emitter = new Emitter()
+ * const emitter = new Emitter({ emitError: true })
  * emitter.on((result, off) => {
  * 	if (result.status === 'error') off()
  * })
@@ -86,7 +85,7 @@ export class Emitter {
 	/**
 	 * Maps public handlers to event listener adapters.
 	 */
-	private readonly _listeners = new Map<Emitter.AnyFn, Emitter.AnyFn>()
+	private readonly _listeners = new Map<Emitter.AnyFn, EventListener>()
 
 	/**
 	 * Optional predicate for default `ok` emissions.
@@ -99,10 +98,10 @@ export class Emitter {
 	public readonly emitError?: Emitter.EmitByDefaultOptionPredicat
 
 	/**
-	 * Creates an emitter with default emission options.
+	 * Creates an emitter with automatic emission options.
 	 *
 	 * @param options
-	 * Emission options for ok and error results.
+	 * Required options that enable or filter automatic ok and error emissions.
 	 */
 	constructor(options: Emitter.Options) {
 		if (options.emitOk) this.emitOk = this._emitPredicate(options.emitOk)
@@ -121,24 +120,26 @@ export class Emitter {
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter()
+	 * const emitter = new Emitter({ emitOk: true })
 	 * const off = emitter.on((result) => result.status)
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter()
+	 * const emitter = new Emitter({ emitOk: true })
 	 * emitter.on((result, off) => {
 	 * 	if (result.status === 'ok') off()
 	 * })
 	 * ```
 	 */
-	public on(handler: Emitter.Handler<'on'>): undefined | (() => void) {
-		const off = () => this.off(handler as Emitter.Handler<'off'>)
-		const adapter = (event: CustomEvent<ResultAny>) => handler(event.detail, off)
+	public on(handler: Emitter.Handler<'on'>): () => void {
+		const off = () => this.off(handler)
+		const adapter: EventListener = (event) => handler((event as CustomEvent<ResultAny>).detail, off)
+		const currentAdapter = this._listeners.get(handler)
 
+		if (currentAdapter) this._target.removeEventListener('emit', currentAdapter)
 		this._listeners.set(handler, adapter)
-		this._target.addEventListener('emit', (event) => adapter(event as CustomEvent<ResultAny>))
+		this._target.addEventListener('emit', adapter)
 
 		return off
 	}
@@ -151,22 +152,25 @@ export class Emitter {
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter()
+	 * const emitter = new Emitter({})
 	 * const off = emitter.on(() => undefined)
-	 * off?.()
+	 * off()
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter()
+	 * const emitter = new Emitter({})
 	 * const handler = (result: ResultAny) => result.status
 	 * emitter.on(handler)
 	 * emitter.off(handler)
 	 * ```
 	 */
-	public off(handler: Emitter.Handler<'off'>): void {
+	public off(handler: Emitter.Handler<'on'> | Emitter.Handler<'off'>): void {
 		const adapter = this._listeners.get(handler)
-		if (adapter) this._target.removeEventListener('emit', adapter)
+		if (!adapter) return
+
+		this._target.removeEventListener('emit', adapter)
+		this._listeners.delete(handler)
 	}
 
 	/**
@@ -174,13 +178,13 @@ export class Emitter {
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter()
+	 * const emitter = new Emitter({})
 	 * emitter.offAll()
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter()
+	 * const emitter = new Emitter({})
 	 * emitter.on(() => undefined)
 	 * emitter.offAll()
 	 * ```
@@ -197,18 +201,18 @@ export class Emitter {
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter()
+	 * const emitter = new Emitter({})
 	 * emitter.emit(ResultOk({ data: 1 }))
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter()
+	 * const emitter = new Emitter({})
 	 * emitter.emit(ResultError({ tag: 'Failure', data: 'broken' }))
 	 * ```
 	 */
 	public emit(result: ResultAny): void {
-		const event = new CustomEvent('@', { detail: result })
+		const event = new CustomEvent('emit', { detail: result })
 		this._target.dispatchEvent(event)
 	}
 

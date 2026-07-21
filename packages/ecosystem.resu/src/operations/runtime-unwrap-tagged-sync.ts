@@ -15,11 +15,13 @@ export type RuntimeUnwrapTaggedSync<R extends ResultAny> =
 /**
  * Creates a sync generator helper that unwraps `{ tag, data }` for `yield*`.
  *
+ * Mapper errors are converted into yielded `RuntimeError` results.
+ *
  * @param result
- * Result or value to unwrap.
+ * Existing result, or source value that must be converted by `map`.
  *
  * @param map
- * Optional mapper used when the first argument is not already a result.
+ * Mapper required when the first argument is not already a result.
  *
  * @returns
  * Generator that yields a result and returns its tag with data.

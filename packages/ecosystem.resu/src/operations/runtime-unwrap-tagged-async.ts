@@ -15,11 +15,14 @@ export type RuntimeUnwrapTaggedAsync<R extends ResultAny> =
 /**
  * Creates an async generator helper that unwraps `{ tag, data }` for `yield*`.
  *
+ * Mapper errors and rejections are converted into yielded `RuntimeError` results.
+ *
  * @param result
- * Result, promise, or value to unwrap.
+ * Existing result, a promise resolving to one, or a source value or promise
+ * that must be converted by `map`.
  *
  * @param map
- * Optional mapper used when the first argument is not already a result.
+ * Mapper required when the resolved first argument is not already a result.
  *
  * @returns
  * Async generator that yields a result and returns its tag with data.

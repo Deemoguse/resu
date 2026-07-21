@@ -8,7 +8,7 @@ import type { Result } from '../classes/result'
  * Source value or result type.
  *
  * @template T
- * Optional tag override.
+ * Optional tag override, including `null`.
  */
 export type ResultErrorFrom<
 	V,
@@ -25,7 +25,7 @@ export type ResultErrorFrom<
  * Source value or result whose payload should be used.
  *
  * @param tag
- * Optional tag override.
+ * Optional tag override, including `null`.
  *
  * @returns
  * New `error` result.

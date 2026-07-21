@@ -29,9 +29,11 @@ export declare namespace ResultWith {
 				 */
 				data?: UtilsNonUndefined<D>
 				/**
-				 * Optional logging flag kept for constructor compatibility.
+				 * Optional override for automatic result emission.
+				 *
+				 * `true` forces emission and `false` suppresses it.
 				 */
-				log?: boolean
+				emit?: boolean
 			}
 			: never
 }

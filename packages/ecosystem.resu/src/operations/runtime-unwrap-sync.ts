@@ -1,5 +1,6 @@
 import { RuntimeUnwrapCreateWith } from '../factories/runtime-unwrap-create-with'
 import type { ResultAny } from './result-any'
+import { ResultOkFrom } from './result-ok-from'
 
 /**
  * Synchronous generator that yields a result and returns its payload.
@@ -15,11 +16,13 @@ export type RuntimeUnwrapSync<R extends ResultAny> =
 /**
  * Creates a sync generator helper that unwraps result data for `yield*`.
  *
+ * Mapper errors are converted into yielded `RuntimeError` results.
+ *
  * @param result
- * Result or value to unwrap.
+ * Existing result, or source value that must be converted by `map`.
  *
  * @param map
- * Optional mapper used when the first argument is not already a result.
+ * Mapper required when the first argument is not already a result.
  *
  * @returns
  * Generator that yields a result and returns its data.

@@ -15,19 +15,19 @@ export type UtilsErrorRuntime<D = Result.AnyData> = [D] extends [unknown]
  * Creates an error result tagged as `RuntimeError`.
  *
  * @param data
- * Error message or payload to place into the result.
+ * Error message converted into an `Error`, or custom payload stored unchanged.
  *
  * @returns
- * Runtime error result with the provided payload.
+ * Runtime error result with an `Error` for a string input or the provided payload.
  *
  * @example
  * ```ts
- * const result = RuntimeError('Unexpected value')
+ * const result = UtilsErrorRuntime('Unexpected value')
  * ```
  *
  * @example
  * ```ts
- * const result = RuntimeError({ reason: 'invalid-state' })
+ * const result = UtilsErrorRuntime({ reason: 'invalid-state' })
  * ```
  */
 export const UtilsErrorRuntime: UtilsCreateErrorWith<'RuntimeError'> = UtilsCreateErrorWith('RuntimeError')

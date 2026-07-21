@@ -1,4 +1,5 @@
 import { expectAssignable, expectNotAssignable, expectType } from 'tsd'
+import { ResultIs } from '../../src/operations/result-is'
 import { ResultError } from '../../src/operations/result-error'
 import { ResultErrorFrom } from '../../src/operations/result-error-from'
 import { ResultErrorFromUnlessOk } from '../../src/operations/result-error-from-unless-ok'
@@ -14,7 +15,6 @@ import type { ResultExcludeOk } from '../../src/operations/result-exclude-ok'
 import type { ResultExtract } from '../../src/operations/result-extract'
 import type { ResultExtractError } from '../../src/operations/result-extract-error'
 import type { ResultExtractOk } from '../../src/operations/result-extract-ok'
-import type { ResultIs } from '../../src/operations/result-is'
 import type { ResultIsError } from '../../src/operations/result-is-error'
 import type { ResultIsOk } from '../../src/operations/result-is-ok'
 import type { ErrorResult, FailureResult, OkResult, ReadyResult } from './_shared'
@@ -53,6 +53,7 @@ expectType<CreatedOk>(ResultOk())
 expectType<CreatedError>(ResultError())
 
 expectType<OkFromError>(ResultOkFrom(error))
+expectType<ResultOk<null, Error>>(ResultOkFrom(error, null))
 expectType<ErrorFromOk>(ResultErrorFrom(ok, overrideTag))
 expectType<OkUnlessError>(ResultOkFromUnlessError(error, overrideTag))
 expectType<ErrorUnlessOk>(ResultErrorFromUnlessOk(ok, overrideTag))
@@ -63,6 +64,12 @@ expectAssignable<ResultAnyOk>(ok)
 expectAssignable<ResultAnyError>(error)
 expectNotAssignable<ResultAnyOk>(error)
 expectNotAssignable<ResultAnyError>(ok)
+
+const unknownResult: unknown = ok
+if (ResultIs(unknownResult)) {
+	expectType<ResultAny>(unknownResult)
+	expectNotAssignable<ResultAnyError>(unknownResult)
+}
 
 expectType<ExtractedOk>({} as ResultExtract<Input, 'ok'>)
 expectType<ExtractedFailure>({} as ResultExtract<Input, 'error', 'Failure'>)
