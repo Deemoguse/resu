@@ -1,0 +1,6 @@
+{
+	"extends": "@internal/configs/base/ts",
+	"compilerOptions": {
+		"lib": ["DOM", "ES2022"],
+	},
+}
