@@ -91,15 +91,19 @@ export namespace FlowTryWith {
 				/**
 				 * Optional abort signal observed by the async operation.
 				 */
-				signal?: AbortSignal
+				signal?: never
 				/**
 				 * Branch executed by async flow try.
 				 */
-				try: () => Promise<UtilsNonUndefinedSource<T>> | UtilsNonUndefinedSource<T>
+				try:
+					(() => Promise<UtilsNonUndefinedSource<T>>) |
+					(() => UtilsNonUndefinedSource<T>)
 				/**
 				 * Optional recovery branch for rejected or thrown errors.
 				 */
-				catch?: (error: unknown) => Promise<UtilsNonUndefinedSource<C>> | UtilsNonUndefinedSource<C>
+				catch?:
+					((error: unknown) => Promise<UtilsNonUndefinedSource<C>>) |
+					((error: unknown) => UtilsNonUndefinedSource<C>)
 			}
 			: never
 
