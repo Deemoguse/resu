@@ -1,7 +1,7 @@
 {
 	"private": false ,
 	"name": "@wambata/resu",
-	"version": "0.0.0",
+	"version": "0.0.2",
 	"type": "module",
 	"sideEffects": false,
 	"types": "./dist/index.d.cts",
