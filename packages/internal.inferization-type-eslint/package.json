@@ -20,7 +20,7 @@
 		"build": "tsdown",
 		"dev": "tsdown --watch",
 		"lint": "eslint",
-		"lint-fix": "npm run lint -- --fix"
+		"lint-fix": "eslint --fix"
 	},
 	"dependencies": {
 		"@typescript-eslint/utils": "^8.59.1",
