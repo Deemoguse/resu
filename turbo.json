@@ -3,6 +3,11 @@
 
 	"ui": "tui",
 	"tasks": {
+		"release": {
+			"dependsOn": ["lint-fix", "test", "build"],
+			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"outputs": ["dist/*"]
+		},
 		"build": {
 			"dependsOn": ["^build", "test"],
 			"inputs": ["$TURBO_DEFAULT$", ".env*"],
@@ -17,11 +22,11 @@
 		},
 		"lint": {
 			"cache": true,
-			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"inputs": ["$TURBO_DEFAULT$", ".env*"]
 		},
 		"lint-fix": {
 			"cache": true,
-			"inputs": ["$TURBO_DEFAULT$", ".env*"],
-		},
+			"inputs": ["$TURBO_DEFAULT$", ".env*"]
+		}
 	}
 }
