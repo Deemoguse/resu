@@ -2,7 +2,7 @@
 	"private": false,
 	"name": "@wambata/resu",
 	"type": "module",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"license": "Apache-2.0",
 	"description": "TypeScript Result types and flow utilities for typed error handling, async operations, and pattern matching.",
 	"repository": {
@@ -199,11 +199,11 @@
 	},
 	"files": [
 		"dist/**/*.cjs",
-		"dist/**/*.d.cjs",
+		"dist/**/*.d.cts",
 		"dist/**/*.map.cjs",
 
 		"dist/**/*.mjs",
-		"dist/**/*.d.mjs",
+		"dist/**/*.d.mts",
 		"dist/**/*.map.mjs",
 
 		"./LICENSE.md",
