@@ -199,11 +199,11 @@
 	},
 	"files": [
 		"dist/**/*.cjs",
-		"dist/**/*.d.cjs",
+		"dist/**/*.d.cts",
 		"dist/**/*.map.cjs",
 
 		"dist/**/*.mjs",
-		"dist/**/*.d.mjs",
+		"dist/**/*.d.mts",
 		"dist/**/*.map.mjs",
 
 		"./LICENSE.md",
