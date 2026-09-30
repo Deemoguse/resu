@@ -1,13 +1,34 @@
 {
-	"private": false ,
+	"private": false,
 	"name": "@wambata/resu",
-	"version": "0.0.0",
 	"type": "module",
-	"files": [
-		"dist",
-		"./test/types/_entry.d.ts"
+	"version": "0.0.1",
+	"license": "Apache-2.0",
+	"description": "TypeScript Result types and flow utilities for typed error handling, async operations, and pattern matching.",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Deemoguse/resu.git",
+		"directory": "packages/ecosystem.resu"
+	},
+	"tags": [
+		"typescript",
+		"error-handling",
+		"async",
+		"result-types",
+		"pattern-matching",
+		"flow-control"
+	],
+	"keywords": [
+		"typescript",
+		"error-handling",
+		"async",
+		"result-types",
+		"pattern-matching",
+		"flow-control"
 	],
 	"sideEffects": false,
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.cts",
 	"exports": {
 		".": {
@@ -176,14 +197,27 @@
 		},
 		"./package.json": "./package.json"
 	},
+	"files": [
+		"dist/**/*.cjs",
+		"dist/**/*.d.cjs",
+		"dist/**/*.map.cjs",
+
+		"dist/**/*.mjs",
+		"dist/**/*.d.mjs",
+		"dist/**/*.map.mjs",
+
+		"./LICENSE.md",
+		"./test/types/_entry.d.ts"
+	],
 	"scripts": {
 		"build": "tsdown",
 		"dev": "tsdown --watch",
 		"lint": "eslint",
-		"lint-fix": "npm run lint -- --fix",
+		"lint-fix": "eslint --fix",
 		"test": "npm run test:runtime && npm run test:types",
 		"test:runtime": "vitest run",
-		"test:types": "tsd --typings ./test/types/_entry.d.ts --files ./test/types/**/*.test-d.ts"
+		"test:types": "tsd --typings ./test/types/_entry.d.ts --files ./test/types/**/*.test-d.ts",
+		"release": "echo ok"
 	},
 	"devDependencies": {
 		"@internal/configs": "1.0.0",
@@ -199,7 +233,5 @@
 			"composite": false,
 			"isolatedDeclarations": false
 		}
-	},
-	"main": "./dist/index.cjs",
-	"module": "./dist/index.mjs"
+	}
 }
