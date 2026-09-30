@@ -3,10 +3,6 @@
 	"name": "@wambata/resu",
 	"version": "0.0.0",
 	"type": "module",
-	"files": [
-		"dist",
-		"./test/types/_entry.d.ts"
-	],
 	"sideEffects": false,
 	"types": "./dist/index.d.cts",
 	"exports": {
@@ -176,6 +172,18 @@
 		},
 		"./package.json": "./package.json"
 	},
+	"files": [
+		"dist/**/*.cjs",
+		"dist/**/*.d.cts",
+		"dist/**/*.map.cjs",
+
+		"dist/**/*.mjs",
+		"dist/**/*.d.mts",
+		"dist/**/*.map.mjs",
+
+		"./LICENSE.md",
+		"./test/types/_entry.d.ts"
+	],
 	"scripts": {
 		"build": "tsdown",
 		"dev": "tsdown --watch",
