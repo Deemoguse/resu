@@ -60,6 +60,17 @@ Public subpath imports are listed near the end of this document.
 
 ## Quick start
 
+Include the public type file in `tsconfig`:
+
+```json
+{
+	"compilerOptions": [
+		"types": [
+			"@wambata/resu/types"
+		]
+	]
+}
+
 The following example safely parses JSON, validates the data shape, and returns separate domain errors for invalid syntax and invalid content:
 
 ```ts
