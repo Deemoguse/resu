@@ -1,49 +1,36 @@
-import { afterEach, expect, vi } from 'vitest'
+import { expect, vi } from 'vitest'
+import { ResultIs } from '../../../src/operations/result-is'
 import { ResultIsError } from '../../../src/operations/result-is-error'
 import { ResultIsOk } from '../../../src/operations/result-is-ok'
+import type { ResultAny } from '../../../src/operations/result-any'
 import type { ResultAnyError } from '../../../src/operations/result-any-error'
 import type { ResultAnyOk } from '../../../src/operations/result-any-ok'
 
-const testContext = globalThis as typeof globalThis & {
-	window?: typeof globalThis
-	__RESU_EMITTERS__?: Set<unknown>
-}
-
-// @ts-expect-error
-testContext.window ??= globalThis
-afterEach(() => testContext.__RESU_EMITTERS__?.clear())
-
-function assertErrorString(expected: string, received: unknown): string {
-	const prefix = `Expected an ${expected}. Received: `
-	const suffix = typeof received === 'string'? `"${received}"`: JSON.stringify(received)
-	return prefix + suffix
-}
-
-export const expectOkResult = vi.defineHelper(<T>(
+export const expectResult = vi.defineHelper((
 	result: unknown,
-	expected: { tag: null | string, data: T },
-):
-	ResultAnyOk =>
-{
-	const isOkResult = ResultIsOk(result)
-	if (!isOkResult) throw new Error(assertErrorString('ok result', result))
+	expected: { status: 'ok' | 'error', tag: string | null, data: unknown },
+): ResultAny => {
+	expect(ResultIs(result), 'expected a Result instance').toBe(true)
+	const actual = result as ResultAny
+	expect({ status: actual.status, tag: actual.tag, data: actual.data }).toEqual(expected)
+	return result as ResultAny
+})
 
-	expect(result.status).toBe('ok')
-	expect(result.tag).toBe(expected.tag)
-	expect(result.data).toEqual(expected.data)
-	return result
+export const expectOkResult = vi.defineHelper((
+	result: unknown,
+	expected: { tag: string | null, data: unknown },
+): ResultAnyOk => {
+	expect(ResultIsOk(result), 'expected an ok Result').toBe(true)
+	const actual = result as ResultAnyOk
+	expect({ status: actual.status, tag: actual.tag, data: actual.data }).toEqual({ status: 'ok', ...expected })
+	return result as ResultAnyOk
 })
 
 export const expectErrorResult = vi.defineHelper((
 	result: unknown,
-	expectedTag: null | string,
-):
-	ResultAnyError =>
-{
-	const isErrorResult = ResultIsError(result)
-	if (!isErrorResult) throw new Error(assertErrorString('error result', result))
-
-	expect(result.status).toBe('error')
-	expect(result.tag).toBe(expectedTag)
-	return result
+	expectedTag: string | null,
+): ResultAnyError => {
+	expect(ResultIsError(result), 'expected an error Result').toBe(true)
+	expect(result).toMatchObject({ status: 'error', tag: expectedTag })
+	return result as ResultAnyError
 })
