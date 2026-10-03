@@ -83,19 +83,22 @@ export type RuntimeGenCreateWith<T extends 'sync' | 'async'> =
  */
 export function RuntimeGenCreateWith<T extends 'sync' | 'async'>(type: T): RuntimeGenCreateWith<T> {
 	return function (gen) {
-		const runtime = gen()
 		return type === 'sync'
 			? FlowTrySync(() => {
+				const runtime = gen() as Generator<ResultAny, unknown>
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				while (true) {
-					const result = processIter(runtime.next() as IteratorResult<ResultAny, unknown>)
+					const result = processIter(runtime.next())
+					if (ResultIsError(result)) runtime.return(undefined)
 					if (result) return result
 				}
 			})
 			: FlowTryAsync(async () => {
+				const runtime = gen() as AsyncGenerator<ResultAny, unknown>
 				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 				while (true) {
-					const result = processIter(await runtime.next() as IteratorResult<ResultAny, unknown>)
+					const result = processIter(await runtime.next())
+					if (ResultIsError(result)) await runtime.return(undefined)
 					if (result) return result
 				}
 			})
