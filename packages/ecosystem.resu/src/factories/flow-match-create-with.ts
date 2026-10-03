@@ -117,6 +117,8 @@ export function FlowMatchWith<
 
 /**
  * Loose match chain that retains the fields of unmatched results.
+ * Each `result()` call evaluates the chain again. Registration errors and
+ * handler exceptions become `RuntimeError`.
  *
  * @template R
  * Accumulated result type produced by handlers.
@@ -127,14 +129,14 @@ export function FlowMatchWith<
  * @example
  * ```ts
  * const result = new FlowMatchLoose(ResultOk({ data: 2 }))
- * 	.ok([null], (current) => current.data * 2)
+ * 	.case('ok', [null], (current) => current.data * 2)
  * 	.result()
  * ```
  *
  * @example
  * ```ts
  * const result = new FlowMatchLoose(ResultError({ tag: 'Failure', data: 'broken' }))
- * 	.error(['Failure'], (current) => current.data)
+ * 	.case('error', ['Failure'], (current) => current.data)
  * 	.result()
  * ```
  */
@@ -163,7 +165,7 @@ export class FlowMatchLoose<
 	 * const chain = new FlowMatchLoose(ResultError({ tag: 'Failure' }))
 	 * ```
 	 */
-	constructor(result: L, store?: Match.Store) {
+	constructor(result: L, store?: Match.StoreMap) {
 		super(new.target as Match.KindTarget<FlowMatchWith.LooseKind>, result, store)
 	}
 
@@ -172,17 +174,18 @@ export class FlowMatchLoose<
 	 *
 	 * @returns
 	 * Handler result when matched, otherwise a normalized result with the input
-	 * status, tag, and data.
+	 * status, tag, and data. Registration errors and handler exceptions instead
+	 * produce `RuntimeError`.
 	 *
 	 * @example
 	 * ```ts
-	 * const result = FlowMatchLoose(ResultOk({ data: 1 })).result()
+	 * const result = new FlowMatchLoose(ResultOk({ data: 1 })).result()
 	 * ```
 	 *
 	 * @example
 	 * ```ts
-	 * const result = FlowMatchLoose(ResultError({ tag: 'Failure' }))
-	 * 	.any((current) => current.tag)
+	 * const result = new FlowMatchLoose(ResultError({ tag: 'Failure' }))
+	 * 	.case('any', (current) => current.tag)
 	 * 	.result()
 	 * ```
 	 */
@@ -193,7 +196,10 @@ export class FlowMatchLoose<
 }
 
 /**
- * Strict match chain that reports a runtime error when no handler matches.
+ * Strict match chain with compile-time exhaustiveness checking.
+ * `result()` requires every input variant to be handled; while variants remain,
+ * `result(true)` preserves unmatched status, tag, and data. At runtime, an
+ * unmatched result without the flag becomes `RuntimeError`.
  *
  * @template R
  * Accumulated result type produced by handlers.
@@ -204,14 +210,14 @@ export class FlowMatchLoose<
  * @example
  * ```ts
  * const result = new FlowMatchStrict(ResultOk({ data: 2 }))
- * 	.ok([null], (current) => current.data * 2)
+ * 	.case('ok', [null], (current) => current.data * 2)
  * 	.result()
  * ```
  *
  * @example
  * ```ts
  * const result = new FlowMatchStrict(ResultError({ tag: 'Failure', data: 'broken' }))
- * 	.error(['Failure'], (current) => current.data)
+ * 	.case('error', ['Failure'], (current) => current.data)
  * 	.result()
  * ```
  */
@@ -240,31 +246,52 @@ export class FlowMatchStrict<
 	 * const chain = new FlowMatchStrict(ResultError({ tag: 'Failure' }))
 	 * ```
 	 */
-	constructor(result: L, store?: Match.Store) {
+	constructor(result: L, store?: Match.StoreMap) {
 		super(new.target as Match.KindTarget<FlowMatchWith.StrictKind>, result, store)
 	}
 
 	/**
 	 * Evaluates a strict match chain.
+	 * Each call evaluates the chain again. Registration errors and handler
+	 * exceptions become `RuntimeError`, including when the flag is `true`.
+	 *
+	 * @param ignoreMissmatchError
+	 * Required literal `true` while variants remain: preserve unmatched status,
+	 * tag, and data in a normalized result. Once all variants are handled, the
+	 * typed call accepts no arguments.
 	 *
 	 * @returns
-	 * Handler result when matched, otherwise a runtime error result.
+	 * Normalized handler result, preserved unmatched result when permitted, or
+	 * `RuntimeError` for a registration error, handler exception, or strict mismatch.
 	 *
 	 * @example
 	 * ```ts
-	 * const result = FlowMatchStrict(ResultOk({ data: 1 })).result()
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * const result = FlowMatchStrict(ResultError({ tag: 'Failure' }))
-	 * 	.error(['Failure'], (current) => current.data)
+	 * const result = new FlowMatchStrict(ResultOk({ data: 1 }))
+	 * 	.case('ok', null, (current) => current.data)
 	 * 	.result()
 	 * ```
+	 *
+	 * @example
+	 * ```ts
+	 * const result = new FlowMatchStrict(ResultError({ tag: 'Failure' }))
+	 * 	.case('error', ['Failure'], (current) => current.data)
+	 * 	.result()
+	 * ```
+	 *
+	 * @example
+	 * ```ts
+	 * const result = new FlowMatchStrict(ResultOk({ data: 1 })).result(true)
+	 * ```
 	 */
-	public result(): FlowTrySync<R | L> {
+	// Keep evaluation bound to this chain when the callback is passed around.
+	public readonly result: [L] extends [never] ? () => FlowTrySync<R | L> : (ignoreMissmatchError: true) => FlowTrySync<R | L> =
+		this._result.bind(this)
+
+	/** Resolves the match and applies strict unmatched-variant handling. */
+	private _result(...args: unknown[]): FlowTrySync<R | L> {
+		const [ignore] = args
 		const result = this.resolveResult((missmatch, result) => {
-			return missmatch
+			return !ignore && missmatch
 				? UtilsErrorRuntime('Non-exhaustive match. The current result variant was not handled.')
 				: result
 		})
