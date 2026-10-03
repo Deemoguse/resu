@@ -21,7 +21,11 @@ export type FlowMatchStrict<
 /**
  * Creates a strict result match chain.
  *
- * Unmatched results become a runtime error when the chain is evaluated.
+ * Register synchronous handlers with `case()`. TypeScript permits `result()`
+ * without arguments only when every input variant is handled. While variants
+ * remain, call `result(true)` to preserve unmatched status, tag, and data.
+ * At runtime, an unmatched result without the flag becomes `RuntimeError`.
+ * Registration errors and handler exceptions become `RuntimeError` in either mode.
  *
  * @param result
  * Result value to match.
@@ -32,15 +36,20 @@ export type FlowMatchStrict<
  * @example
  * ```ts
  * const result = FlowMatchStrict(ResultOk({ data: 2 }))
- * 	.ok([null], (current) => current.data * 2)
+ * 	.case('ok', null, (current) => current.data * 2)
  * 	.result()
  * ```
  *
  * @example
  * ```ts
  * const result = FlowMatchStrict(ResultError({ tag: 'Failure', data: 'broken' }))
- * 	.error(['Failure'], (current) => current.data)
+ * 	.case('error', 'Failure', (current) => current.data)
  * 	.result()
+ * ```
+ *
+ * @example
+ * ```ts
+ * const result = FlowMatchStrict(ResultError({ tag: 'Failure' })).result(true)
  * ```
  */
 export const FlowMatchStrict: FlowMatchWith<'strict'> = FlowMatchWith('strict')

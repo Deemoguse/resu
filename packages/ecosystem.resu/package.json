@@ -171,6 +171,10 @@
 			"import": "./dist/runtime-unwrap-tagged-sync.mjs",
 			"require": "./dist/runtime-unwrap-tagged-sync.cjs"
 		},
+		"./types": {
+			"import": "./dist/types.mjs",
+			"require": "./dist/types.cjs"
+		},
 		"./utils/utils-error-abort": {
 			"import": "./dist/utils/utils-error-abort.mjs",
 			"require": "./dist/utils/utils-error-abort.cjs"
@@ -214,7 +218,9 @@
 		"dev": "tsdown --watch",
 		"lint": "eslint",
 		"lint-fix": "eslint --fix",
-		"test": "npm run test:runtime && npm run test:types",
+		"test": "npm run test:typecheck && npm run test:types && npm run test:runtime",
+		"test:typecheck": "tsc --project ./test/tsconfig.json",
+		"test:coverage": "npm run test:typecheck && npm run test:types && vitest run --coverage",
 		"test:runtime": "vitest run",
 		"test:types": "tsd --typings ./test/types/_entry.d.ts --files ./test/types/**/*.test-d.ts",
 		"release": "echo ok"
@@ -222,6 +228,7 @@
 	"devDependencies": {
 		"@internal/configs": "1.0.0",
 		"@internal/inferization-type-eslint": "1.0.0",
+		"@vitest/coverage-v8": "^4.1.7",
 		"eslint": "^10.2.1",
 		"tsd": "^0.33.0",
 		"tsdown": "^0.21.10",

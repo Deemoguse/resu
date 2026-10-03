@@ -6,7 +6,8 @@ import { expectErrorResult, expectOkResult, expectResult } from './helpers/resul
 // out-of-order registrations rejected by the typed chain. Type contracts are
 // checked separately in test/types/flow-match.test-d.ts.
 type RuntimeMatch = {
-	case: (status: 'ok' | 'error' | 'any', tagOrHandler: unknown, handler?: unknown) => RuntimeMatch
+	case(status: 'ok' | 'error', tag: unknown, handler: unknown): RuntimeMatch
+	case(status: 'ok' | 'error' | 'any', handler: unknown): RuntimeMatch
 	result: (ignoreMismatch?: true) => Result.Any
 }
 
@@ -54,18 +55,6 @@ describe.each(modes)('Flow.Match.$name', ({ create }) => {
 				create(input).case(status, ['Ready'], handler).result(true)
 				expect(handler).not.toHaveBeenCalled()
 			})
-
-			it.each([
-				{ label: 'single tag', tags: 'Ready', tag: 'Ready' },
-				{ label: 'tag array', tags: ['Ready', 'Cached'], tag: 'Cached' },
-				{ label: 'null tag', tags: null, tag: null },
-			])('matches either status with any and a $label', ({ tags, tag }) => {
-				const handler = vi.fn(() => 'handled')
-				const input = make({ tag, data: 2 })
-				const chain = create(input).case('any', tags, handler)
-				expectOkResult(chain.result(), { tag: null, data: 'handled' })
-				expect(handler).toHaveBeenCalledExactlyOnceWith(input)
-			})
 		})
 	})
 
@@ -78,6 +67,28 @@ describe.each(modes)('Flow.Match.$name', ({ create }) => {
 
 		it.each(branches)('uses the general fallback for $status results', ({ make }) => {
 			expectOkResult(create(make({ data: 1 })).case('any', () => 'fallback').result(), { tag: null, data: 'fallback' })
+		})
+
+		it.each(branches)('separates shared tags and falls back for other $status tags', ({ status, make }) => {
+			const input = make({ tag: 'Shared', data: 2 })
+			const okHandler = vi.fn(() => 'ok')
+			const errorHandler = vi.fn(() => 'error')
+			const fallbackHandler = vi.fn(() => 'fallback')
+			const base = create(input)
+				.case('ok', 'Shared', okHandler)
+				.case('error', 'Shared', errorHandler)
+			expectOkResult(base.case('any', fallbackHandler).result(), { tag: null, data: status })
+			expect(status === 'ok' ? okHandler : errorHandler).toHaveBeenCalledExactlyOnceWith(input)
+			expect(status === 'ok' ? errorHandler : okHandler).not.toHaveBeenCalled()
+			expect(fallbackHandler).not.toHaveBeenCalled()
+
+			const other = make({ tag: 'Other', data: 3 })
+			expectOkResult(create(other)
+				.case('ok', 'Shared', okHandler)
+				.case('error', 'Shared', errorHandler)
+				.case('any', fallbackHandler)
+				.result(), { tag: null, data: 'fallback' })
+			expect(fallbackHandler).toHaveBeenCalledExactlyOnceWith(other)
 		})
 
 		it.each([
@@ -194,6 +205,24 @@ describe.each(modes)('Flow.Match.$name', ({ create }) => {
 				.case('error', 'Shared', () => 'error')
 			expectOkResult(chain.result(), { tag: null, data: 'error' })
 		})
+	})
+})
+
+describe('typed tag and status composition', () => {
+	type Input = Result.Ok<'Ready', number> | Result.Ok<'Text', string>
+
+	function transform(input: Input) {
+		return Flow.Match.Strict(input)
+			.case('ok', 'Ready', (current) => current.data.toString())
+			.case('ok', (current) => current.data.toUpperCase())
+			.result()
+	}
+
+	it.each([
+		{ input: Result.Ok({ tag: 'Ready', data: 123 }), expected: '123' },
+		{ input: Result.Ok({ tag: 'Text', data: 'ready' }), expected: 'READY' },
+	])('routes $input.tag to the handler for its payload type', ({ input, expected }) => {
+		expectOkResult(transform(input), { tag: null, data: expected })
 	})
 })
 

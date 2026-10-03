@@ -8,5 +8,5 @@ export default createConfig({
 		'utils/*': './src/utils/*.ts',
 		'emitter': './src/classes/emitter.ts',
 		'types': './src/types.ts',
-	}
+	},
 })
