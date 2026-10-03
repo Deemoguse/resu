@@ -270,7 +270,7 @@ export function FlowTryWith<M extends 'sync' | 'async'>(mode: M): FlowTryWith<M>
 			}
 		}
 		else if (signal?.aborted) {
-			return UtilsErrorAbort()
+			return Promise.resolve(UtilsErrorAbort())
 		}
 		else return new Promise<ResultAny>((res) => {
 			const tryFnPromise = (signal?: AbortSignal) => promiseResultWrap(Promise.resolve(signal).then(tryFn))
