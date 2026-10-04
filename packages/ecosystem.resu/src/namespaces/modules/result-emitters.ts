@@ -1,5 +1,5 @@
 /**
- * Event-style dispatcher used by result emitter operations.
+ * Dispatcher of frozen `Result` copies sharing their source payloads.
  */
 export { Emitter } from '../../classes/emitter'
 

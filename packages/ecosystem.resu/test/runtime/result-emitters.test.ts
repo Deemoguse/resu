@@ -1,19 +1,85 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Emitter } from '../../src/classes/emitter'
 import { Flow, Result } from '../../src/namespaces/index'
-import { expectOkResult } from './helpers/result-assertions'
+import { expectOkResult, expectResult } from './helpers/result-assertions'
 
 describe('Emitter subscriptions', () => {
-	it('delivers the original result synchronously to all subscribers', () => {
+	it.each([
+		{ status: 'ok', make: Result.Ok },
+		{ status: 'error', make: Result.Error },
+	] as const)('delivers one frozen shallow $status copy synchronously to all subscribers', ({ status, make }) => {
 		const emitter = new Emitter({})
 		const first = vi.fn()
 		const second = vi.fn()
 		emitter.on(first)
 		emitter.on(second)
-		const input = Result.Ok({ data: 1 })
+		const data = { nested: { count: 1 } }
+		const input = make({ tag: 'Observed', data })
 		emitter.emit(input)
-		expect(first).toHaveBeenCalledExactlyOnceWith(input, expect.any(Function))
-		expect(second).toHaveBeenCalledExactlyOnceWith(input, expect.any(Function))
+		const snapshot = first.mock.calls[0]?.[0] as typeof input
+		expect(first).toHaveBeenCalledExactlyOnceWith(snapshot, expect.any(Function))
+		expect(second).toHaveBeenCalledExactlyOnceWith(snapshot, expect.any(Function))
+		expectResult(snapshot, { status, tag: 'Observed', data })
+		expect(snapshot).not.toBe(input)
+		expect(snapshot.data).toBe(data)
+		expect(snapshot.data.nested).toBe(data.nested)
+		expect(second.mock.calls[0]?.[0]).toBe(snapshot)
+		expect(Object.getPrototypeOf(snapshot)).toBe(Object.getPrototypeOf(input))
+		expect(Object.isFrozen(snapshot)).toBe(true)
+		expect(Result.Is(snapshot)).toBe(true)
+		expect(Result.IsOk(snapshot)).toBe(status === 'ok')
+		expect(Result.IsError(snapshot)).toBe(status === 'error')
+	})
+
+	it('protects result fields while sharing payload changes with the source and other listeners', () => {
+		const emitter = new Emitter({})
+		const data = { nested: { count: 1 } }
+		const input = Result.Ok({ tag: 'Original', data })
+		const second = vi.fn()
+		const fieldWrites: boolean[] = []
+		emitter.on((snapshot) => {
+			fieldWrites.push(Reflect.set(snapshot, 'status', 'error'))
+			fieldWrites.push(Reflect.set(snapshot, 'tag', 'Observed'))
+			fieldWrites.push(Reflect.set(snapshot, 'data', {}))
+			const copiedData = snapshot.data as typeof data
+			copiedData.nested.count = 2
+		})
+		emitter.on(second)
+		emitter.emit(input)
+		expect(fieldWrites).toEqual([false, false, false])
+		const copy = expectOkResult(second.mock.calls[0]?.[0], { tag: 'Original', data: { nested: { count: 2 } } })
+		expect(copy).not.toBe(input)
+		expect(copy.data).toBe(data)
+		expectOkResult(input, { tag: 'Original', data: { nested: { count: 2 } } })
+	})
+
+	it('creates a fresh result wrapper sharing the same payload for each emission', () => {
+		const emitter = new Emitter({})
+		const listener = vi.fn()
+		emitter.on(listener)
+		const data = { count: 1 }
+		const input = Result.Ok({ data })
+		emitter.emit(input)
+		data.count = 2
+		emitter.emit(input)
+		const first = listener.mock.calls[0]?.[0] as typeof input
+		const second = listener.mock.calls[1]?.[0] as typeof input
+		expect(first).not.toBe(second)
+		expect(first.data).toBe(data)
+		expect(second.data).toBe(data)
+		expect(first.data.count).toBe(2)
+		expect(second.data.count).toBe(2)
+	})
+
+	it('preserves function payload identity', () => {
+		const emitter = new Emitter({})
+		const listener = vi.fn()
+		emitter.on(listener)
+		const input = Result.Ok({ data: () => 1 })
+		emitter.emit(input)
+		expect(listener).toHaveBeenCalledTimes(1)
+		const copy = expectOkResult(listener.mock.calls[0]?.[0], { tag: null, data: input.data })
+		expect(copy.data).toBe(input.data)
 	})
 
 	it('passes the returned unsubscribe function to its handler', () => {
@@ -102,11 +168,28 @@ describe('Emitter subscriptions', () => {
 		const input = Result.Ok({ data: 1, emit: false })
 		emitter.emit(input)
 		expect(listener).toHaveBeenCalledTimes(1)
-		expect(listener.mock.calls[0]?.[0]).toBe(input)
+		expectOkResult(listener.mock.calls[0]?.[0], { tag: null, data: 1 })
+		expect(listener.mock.calls[0]?.[0]).not.toBe(input)
 	})
 })
 
 describe('Result.Emitters registration', () => {
+	it.each([
+		{ status: 'ok', make: Result.Ok },
+		{ status: 'error', make: Result.Error },
+	] as const)('does not automatically emit the copied $status result again', ({ make }) => {
+		// Bound re-entry so a regression fails without overflowing the stack.
+		const predicate = vi.fn(() => predicate.mock.calls.length === 1)
+		const emitter = new Emitter({ emitOk: predicate, emitError: predicate })
+		const listener = vi.fn()
+		emitter.on(listener)
+		Result.Emitters.Add(emitter)
+		const input = make({ tag: 'Observed', data: 1 })
+		expect(predicate).toHaveBeenCalledExactlyOnceWith(input)
+		expect(listener).toHaveBeenCalledTimes(1)
+		expect(listener.mock.calls[0]?.[0]).not.toBe(input)
+	})
+
 	it('starts observing results only after Add', () => {
 		const emitter = new Emitter({ emitOk: true, emitError: true })
 		const listener = vi.fn()
@@ -116,7 +199,11 @@ describe('Result.Emitters registration', () => {
 		Result.Emitters.Add(emitter)
 		const success = Result.Ok({ data: 1 })
 		const failure = Result.Error({ data: 2 })
-		expect(listener.mock.calls.map(([result]) => result)).toEqual([success, failure])
+		expect(listener).toHaveBeenCalledTimes(2)
+		expectResult(listener.mock.calls[0]?.[0], { status: 'ok', tag: null, data: 1 })
+		expectResult(listener.mock.calls[1]?.[0], { status: 'error', tag: null, data: 2 })
+		expect(listener.mock.calls[0]?.[0]).not.toBe(success)
+		expect(listener.mock.calls[1]?.[0]).not.toBe(failure)
 	})
 
 	it('registers the same emitter only once', () => {
@@ -138,9 +225,16 @@ describe('Result.Emitters registration', () => {
 		second.on(secondListener)
 		Result.Emitters.Add(first)
 		Result.Emitters.Add(second)
-		Result.Ok({ data: 1 })
+		const input = Result.Ok({ data: { count: 1 } })
 		expect(firstListener).toHaveBeenCalledTimes(1)
 		expect(secondListener).toHaveBeenCalledTimes(1)
+		const firstSnapshot = firstListener.mock.calls[0]?.[0] as typeof input
+		const secondSnapshot = secondListener.mock.calls[0]?.[0] as typeof input
+		expect(firstSnapshot).not.toBe(input)
+		expect(secondSnapshot).not.toBe(input)
+		expect(firstSnapshot).not.toBe(secondSnapshot)
+		expect(firstSnapshot.data).toBe(input.data)
+		expect(secondSnapshot.data).toBe(input.data)
 	})
 
 	it('Delete stops automatic and manual delivery to previous listeners', () => {
@@ -207,13 +301,30 @@ describe('Result.Emitters registration', () => {
 		expect(listener).toHaveBeenCalledTimes(1)
 	})
 
-	it('publishes a frozen result to observers', () => {
+	it('publishes a frozen result copy sharing the original payload', () => {
 		const emitter = new Emitter({ emitOk: true })
-		const frozenAtDelivery: boolean[] = []
-		emitter.on((result) => frozenAtDelivery.push(Object.isFrozen(result)))
+		const data = { nested: { count: 1 } }
+		const listener = vi.fn()
+		emitter.on(listener)
 		Result.Emitters.Add(emitter)
-		Result.Ok({ data: 1 })
-		expect(frozenAtDelivery).toEqual([true])
+		const input = Result.Ok({ tag: 'Original', data })
+		const snapshot = expectOkResult(listener.mock.calls[0]?.[0], { tag: 'Original', data })
+		expect(snapshot).not.toBe(input)
+		expect(snapshot.data).toBe(data)
+		expect(Object.isFrozen(snapshot)).toBe(true)
+		expect(Object.isFrozen(input)).toBe(true)
+		expectOkResult(input, { tag: 'Original', data: { nested: { count: 1 } } })
+	})
+
+	it('automatically emits results with function payloads', () => {
+		const emitter = new Emitter({ emitOk: true })
+		const listener = vi.fn()
+		emitter.on(listener)
+		Result.Emitters.Add(emitter)
+		const input = Result.Ok({ data: () => 1 })
+		expect(listener).toHaveBeenCalledTimes(1)
+		const copy = expectOkResult(listener.mock.calls[0]?.[0], { tag: null, data: input.data })
+		expect(copy.data).toBe(input.data)
 	})
 })
 
@@ -245,11 +356,15 @@ describe('automatic emission filters', () => {
 		Result.Ok({ tag: 'Hidden', data: 2 })
 		const visibleError = Result.Error({ data: 'visible' })
 		Result.Error({ data: 'hidden' })
-		expect(listener.mock.calls.map(([result]) => result)).toEqual([visibleOk, visibleError])
+		expect(listener).toHaveBeenCalledTimes(2)
+		expectResult(listener.mock.calls[0]?.[0], { status: 'ok', tag: 'Visible', data: 1 })
+		expectResult(listener.mock.calls[1]?.[0], { status: 'error', tag: null, data: 'visible' })
 		expect(emitOk).toHaveBeenCalledTimes(2)
 		expect(emitError).toHaveBeenCalledTimes(2)
 		expect(emitOk).toHaveBeenCalledWith(visibleOk)
 		expect(emitError).toHaveBeenCalledWith(visibleError)
+		expect(emitOk.mock.calls[0]?.[0]).toBe(visibleOk)
+		expect(emitError.mock.calls[0]?.[0]).toBe(visibleError)
 	})
 
 	it('emit:true bypasses a disabled predicate', () => {
@@ -259,7 +374,9 @@ describe('automatic emission filters', () => {
 		emitter.on(listener)
 		Result.Emitters.Add(emitter)
 		const input = Result.Ok({ data: 1, emit: true })
-		expect(listener).toHaveBeenCalledExactlyOnceWith(input, expect.any(Function))
+		const copy = expectOkResult(listener.mock.calls[0]?.[0], { tag: null, data: 1 })
+		expect(listener).toHaveBeenCalledExactlyOnceWith(copy, expect.any(Function))
+		expect(listener.mock.calls[0]?.[0]).not.toBe(input)
 		expect(predicate).not.toHaveBeenCalled()
 	})
 
@@ -271,6 +388,7 @@ describe('automatic emission filters', () => {
 		Result.Emitters.Add(emitter)
 		Result.Ok({ data: 1, emit: false })
 		Result.Error({ data: 2, emit: false })
+		expect(() => Result.Ok({ data: () => 1, emit: false })).not.toThrow()
 		expect(listener).not.toHaveBeenCalled()
 		expect(predicate).not.toHaveBeenCalled()
 	})
@@ -282,7 +400,8 @@ describe('automatic emission filters', () => {
 		emitter.on(listener)
 		Result.Emitters.Add(emitter)
 		const converted = Result.OkFrom(source)
-		expect(listener.mock.calls[0]?.[0]).toBe(converted)
+		expectOkResult(listener.mock.calls[0]?.[0], { tag: 'Failure', data: 1 })
+		expect(listener.mock.calls[0]?.[0]).not.toBe(converted)
 		expect(source.status).toBe('error')
 		expectOkResult(converted, { tag: 'Failure', data: 1 })
 	})

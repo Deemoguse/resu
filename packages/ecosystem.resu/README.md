@@ -3,7 +3,7 @@
 **English** | [Русский](README.ru.md)
 
 > [!WARNING]
-> **Status: WIP.** The current API version is `0.0.2`. Public names, types, import paths, and behavior may change without backward compatibility.
+> **Status: WIP.** The current API version is `0.0.*`. Public names, types, import paths, and behavior may change without backward compatibility.
 
 `resu` represents successful and failed outcomes as typed `Result` values. It lets you model expected domain errors explicitly, narrow them with TypeScript, and compose operations without requiring `throw`/`catch` in calling code.
 
@@ -836,6 +836,12 @@ Result.Emitters.Delete(emitter)
 ```
 
 `Result.Emitters.Add` enables automatic emission through this emitter. `Result.Emitters.Delete` removes it from the global list and clears its subscriptions.
+
+Listeners synchronously receive a new frozen `Result` instance with the source's `status`, `tag`, and `data`. The copy has a different reference from the source and is recognized by `Result.Is`, `Result.IsOk`, and `Result.IsError` according to its status.
+
+Copying is intentionally shallow: `data` is reused, including its nested objects. The result's fields are frozen and typed as `readonly`; this does not recursively freeze or make the payload readonly. Mutable payloads remain shared with the source and other listeners. Changes to a payload are visible through every result that references it. All listeners of one emitter receive the same copy for one emission; each new emission or separate emitter creates a new `Result` wrapper.
+
+Payloads do not need to support structured cloning; functions and custom instances retain their identity. Creating the copy does not trigger another automatic emission. Automatic emission predicates receive the original result.
 
 Always remove an emitter when it is no longer needed. This is particularly important in long-running processes and tests.
 
