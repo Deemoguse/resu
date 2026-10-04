@@ -23,6 +23,15 @@ import { Result } from '../../src/namespaces/index'
 	const off = emitter.on((result, unsubscribe) => {
 		expectType<Result.Any>(result)
 		expectType<() => void>(unsubscribe)
+		expectError(result.status = 'ok')
+		expectError(result.tag = 'Changed')
+		expectError(result.data = null)
+		if (Result.IsOk(result)) {
+			expectType<Result.AnyOk>(result)
+		}
+		if (Result.IsError(result)) {
+			expectType<Result.AnyError>(result)
+		}
 	})
 	expectType<() => void>(off)
 	expectType<void>(emitter.off(() => {}))
@@ -34,4 +43,14 @@ import { Result } from '../../src/namespaces/index'
 	expectError(emitter.emit(1))
 	expectError(Result.Emitters.Add({}))
 	expectError(Result.Emitters.Delete({}))
+}
+
+// Result fields are readonly; the payload retains its original mutability.
+{
+	const result = Result.Ok({ data: { nested: { count: 1 } } })
+	expectType<{ nested: { count: number } }>(result.data)
+	expectError(result.data = { nested: { count: 2 } })
+	result.data.nested.count = 2
+	const emitter = new Result.Emitters.Emitter({})
+	expectType<void>(emitter.emit(result))
 }

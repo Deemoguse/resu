@@ -3,6 +3,7 @@ import type { Emitter } from '../classes/emitter'
 
 /**
  * Registers an emitter for result construction events.
+ * Listeners receive frozen `Result` copies sharing the original payloads.
  *
  * @param emmiter
  * Emitter instance to register.

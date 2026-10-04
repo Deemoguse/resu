@@ -83,7 +83,7 @@ export namespace Result {
 const ResultSymbol = Symbol.for('__RESU_RESULT_KEY__')
 
 /**
- * Immutable container for an `ok` or `error` result value.
+ * Container for an `ok` or `error` result with readonly, shallow-frozen fields.
  *
  * Result instances expose only their status, optional tag, and payload. Prefer
  * the public result operation helpers for construction in application code.
@@ -124,6 +124,8 @@ export class Result<P extends {
 
 	/**
 	 * Registers an emitter that can observe newly created results.
+	 * Listeners receive new `Result` instances sharing the original payload.
+	 * Emission predicates receive the original result.
 	 *
 	 * @param emmiter
 	 * Emitter instance to add to the shared registry.
@@ -191,7 +193,7 @@ export class Result<P extends {
 	public readonly tag: P['tag']
 
 	/**
-	 * Payload carried by this result.
+	 * Payload carried by this result; readonly applies to the field, not nested data.
 	 *
 	 * @public
 	 */
@@ -226,6 +228,7 @@ export class Result<P extends {
 
 	/**
 	 * Notifies registered emitters about this result when emission is allowed.
+	 * Each emitter delivers its own frozen copy sharing this result's payload.
 	 *
 	 * @param emit
 	 * `true` forces emission, `false` suppresses it, and omission uses the

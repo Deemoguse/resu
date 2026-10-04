@@ -1,4 +1,5 @@
 import type { ResultAny } from '../operations/result-any'
+import { Result } from './result'
 
 /**
  * Types used by result emitters.
@@ -12,6 +13,7 @@ export namespace Emitter {
 
 	/**
 	 * Handler accepted by emitter subscription methods.
+	 * Delivered values are frozen `Result` copies sharing the original payload.
 	 *
 	 * @template T
 	 * Subscription phase that determines the handler arguments.
@@ -25,6 +27,7 @@ export namespace Emitter {
 
 	/**
 	 * Predicate that decides whether a result should be emitted by default.
+	 * Receives the original result before copying.
 	 *
 	 * @param result
 	 * Result being considered for emission.
@@ -57,6 +60,7 @@ export namespace Emitter {
 
 /**
  * Event-style dispatcher used by result emission helpers.
+ * Listeners receive frozen `Result` copies; payloads retain their original references.
  *
  * Emitter instances subscribe to result events and can be registered with the
  * result emitter operations. Constructor options select which result statuses
@@ -109,7 +113,8 @@ export class Emitter {
 	}
 
 	/**
-	 * Subscribes to emitted results.
+	 * Subscribes to synchronous result copies.
+	 * All listeners in one emission receive the same frozen instance.
 	 *
 	 * @param handler
 	 * Callback invoked for each emitted result. The second argument unsubscribes
@@ -194,7 +199,8 @@ export class Emitter {
 	}
 
 	/**
-	 * Emits a result to the current subscribers.
+	 * Synchronously emits a new frozen `Result` sharing the source payload.
+	 * Creating the copy does not trigger automatic emission.
 	 *
 	 * @param result
 	 * Result instance to dispatch.
@@ -212,7 +218,8 @@ export class Emitter {
 	 * ```
 	 */
 	public emit(result: ResultAny): void {
-		const event = new CustomEvent('emit', { detail: result })
+		const copiedResult = new Result({ status: result.status, tag: result.tag, data: result.data, emit: false })
+		const event = new CustomEvent('emit', { detail: copiedResult })
 		this._target.dispatchEvent(event)
 	}
 
