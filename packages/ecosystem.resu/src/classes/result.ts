@@ -1,6 +1,6 @@
-import type { Emitter } from './emitter'
 import type { ResultAny } from '../operations/result-any'
 import type { UtilsNonUndefined } from '../utils/utils-non-undefined'
+import { Emitter } from './emitter'
 
 /**
  * Describes the structural pieces shared by every result instance.
@@ -20,16 +20,6 @@ export namespace Result {
 	 * Payload accepted by result helpers.
 	 */
 	export type Data = unknown
-
-	/**
-	 * Non-undefined tag shape used by broad result aliases.
-	 */
-	export type AnyTag = UtilsNonUndefined<Tag>
-
-	/**
-	 * Broad payload shape used by result aliases.
-	 */
-	export type AnyData = UtilsNonUndefined<unknown>
 
 	/**
 	 * Constructor parameters for a concrete result shape.
@@ -66,10 +56,10 @@ export namespace Result {
 				data?: UtilsNonUndefined<P['data']>
 
 				/**
-				 * Optional override for result emission.
+				 * Controls notification of result creation subscribers.
 				 *
-				 * `true` forces emission, `false` suppresses it, and omission uses
-				 * the emitter predicate for the result status.
+				 * `false` suppresses notification for this result. `true` or omission
+				 * notifies all current subscribers, regardless of the result status.
 				 *
 				 * @public
 				 */
@@ -87,6 +77,8 @@ const ResultSymbol = Symbol.for('__RESU_RESULT_KEY__')
  *
  * Result instances expose only their status, optional tag, and payload. Prefer
  * the public result operation helpers for construction in application code.
+ * Subscribers receive this same instance synchronously after it is frozen,
+ * unless construction uses `emit: false`. Nested result creation is not suppressed.
  *
  * @template P
  * Result shape whose `status`, `tag`, and `data` fields are exposed by the instance.
@@ -110,70 +102,6 @@ export class Result<P extends {
 	tag: Result.Tag
 	data: Result.Data
 }> {
-	/**
-	 * Returns the shared emitter registry.
-	 *
-	 * @returns
-	 * Mutable emitter set used by result construction.
-	 */
-	private static _getEmitterSet(): Set<Emitter> {
-		const ctx = typeof window === 'undefined' ? globalThis : window
-		// @ts-expect-error eslint-disable-line @typescript-eslint/ban-ts-comment
-		return (ctx['__RESU_EMITTERS__'] ||= new Set()) as Set<Emitter>
-	}
-
-	/**
-	 * Registers an emitter that can observe newly created results.
-	 * Listeners receive new `Result` instances sharing the original payload.
-	 * Emission predicates receive the original result.
-	 *
-	 * @param emmiter
-	 * Emitter instance to add to the shared registry.
-	 *
-	 * @example
-	 * ```ts
-	 * const emitter = getEmitter()
-	 * Result.addEmmiter(emitter)
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * Result.addEmmiter(emitter)
-	 * const off = emitter.on((result) => result.status)
-	 * ```
-	 */
-	public static addEmmiter(emmiter: Emitter): void {
-		const emmiters = this._getEmitterSet()
-		emmiters.add(emmiter)
-	}
-
-	/**
-	 * Removes an emitter from result observation and clears its listeners.
-	 *
-	 * @param emmiter
-	 * Emitter instance to remove from the shared registry.
-	 *
-	 * @example
-	 * ```ts
-	 * Result.deleteEmmiter(emitter)
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * Result.addEmmiter(emitter)
-	 * Result.deleteEmmiter(emitter)
-	 * ```
-	 */
-	public static deleteEmmiter(emmiter: Emitter): void {
-		const emmiters = this._getEmitterSet()
-		if (!emmiters.has(emmiter)) return
-
-		emmiters.delete(emmiter)
-		emmiter.offAll()
-	}
-
-	// ---------------------------------------------------------------------
-
 	// Internal nominal type marker used to distinguish `Result`
 	// from structurally compatible types.
 	public readonly [ResultSymbol] = ResultSymbol
@@ -197,10 +125,12 @@ export class Result<P extends {
 	 *
 	 * @public
 	 */
-	public readonly data: UtilsNonUndefined<P['data']>
+	public readonly data: P['data']
 
 	/**
-	 * Creates a result with the provided status, tag, payload, and emission option.
+	 * Creates and shallow-freezes a result before notifying creation subscribers.
+	 * Unless `emit: false` is provided, subscribers run before construction returns.
+	 * Synchronous subscriber exceptions are logged and do not stop other subscribers.
 	 *
 	 * @param params
 	 * Result fields and optional emission override.
@@ -220,33 +150,11 @@ export class Result<P extends {
 	constructor(params: Result.Params<P>) {
 		this.status = params.status
 		this.tag = (params.tag ?? null)
-		this.data = (params.data ?? null) as UtilsNonUndefined<P['data']>
+		this.data = (params.data ?? null)
 
-		this._callEmit(params.emit)
-		return Object.freeze(this) as this
-	}
+		const readonlyThis = Object.freeze(this)
+		if (params.emit !== false) Emitter.runSubscribers(readonlyThis as ResultAny)
 
-	/**
-	 * Notifies registered emitters about this result when emission is allowed.
-	 * Each emitter delivers its own frozen copy sharing this result's payload.
-	 *
-	 * @param emit
-	 * `true` forces emission, `false` suppresses it, and omission uses the
-	 * emitter predicate for the result status.
-	 *
-	 * @returns
-	 * Nothing.
-	 */
-	private _callEmit(emit?: boolean): void {
-		const emmiters = Result._getEmitterSet()
-		emmiters.forEach((emmiter) => {
-			const allow = emit ?? (
-				this.status === 'ok'
-					? emmiter.emitOk?.(this as ResultAny)
-					: emmiter.emitError?.(this as ResultAny)
-			)
-
-			if (allow) emmiter.emit(this as ResultAny)
-		})
+		return readonlyThis
 	}
 }

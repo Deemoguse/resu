@@ -4,7 +4,7 @@
 export * as Flow from './modules/flow'
 
 /**
- * Result constructors, guards, types, and emitters grouped for namespace-style imports.
+ * Result constructors, guards, types, and event subscriptions grouped for namespace-style imports.
  */
 export * as Result from './modules/result'
 

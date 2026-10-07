@@ -1,238 +1,93 @@
 import type { ResultAny } from '../operations/result-any'
-import { Result } from './result'
 
 /**
- * Types used by result emitters.
+ * Callback types for observing newly created results.
  */
 export namespace Emitter {
 	/**
-	 * Function shape used for internal listener adapters.
-	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	export type AnyFn = (...args: any[]) => any
-
-	/**
-	 * Handler accepted by emitter subscription methods.
-	 * Delivered values are frozen `Result` copies sharing the original payload.
-	 *
-	 * @template T
-	 * Subscription phase that determines the handler arguments.
-	 */
-	export type Handler<T extends 'on' | 'off'> =
-		[T] extends [unknown]
-			? T extends 'on'
-				? (result: ResultAny, off: () => void) => unknown
-				: (result: ResultAny) => unknown
-			: never
-
-	/**
-	 * Predicate that decides whether a result should be emitted by default.
-	 * Receives the original result before copying.
+	 * Receives the original shallow-frozen result and a function to unsubscribe.
+	 * Return values are ignored; returned promises are not awaited or caught.
 	 *
 	 * @param result
-	 * Result being considered for emission.
+	 * Newly created result, with its original payload reference.
 	 *
-	 * @returns
-	 * `true` when the result should be emitted.
+	 * @param unsubscribe
+	 * Idempotent function that removes the callback's current subscription.
 	 */
-	export type EmitByDefaultOptionPredicat = (result: ResultAny) => boolean
-
-	/**
-	 * Static boolean or predicate form accepted by emitter options.
-	 */
-	export type EmitByDefaultOption = boolean | EmitByDefaultOptionPredicat
-
-	/**
-	 * Options that control which result statuses are emitted automatically.
-	 */
-	export type Options = {
-		/**
-		 * Enables or filters automatic `ok` result emission.
-		 */
-		emitOk?: EmitByDefaultOption
-
-		/**
-		 * Enables or filters automatic `error` result emission.
-		 */
-		emitError?: EmitByDefaultOption
-	}
+	export type SubscriberCallback = (result: ResultAny, unsubscribe: () => void) => unknown
 }
 
 /**
- * Event-style dispatcher used by result emission helpers.
- * Listeners receive frozen `Result` copies; payloads retain their original references.
+ * Shared dispatcher for synchronous result creation events.
+ * Prefer `Result.Emitter.Subscribe` and `Result.Emitter.Unsubscribe` in application code.
  *
- * Emitter instances subscribe to result events and can be registered with the
- * result emitter operations. Constructor options select which result statuses
- * are emitted automatically after result construction.
- *
- * @example
- * ```ts
- * const emitter = new Emitter({ emitOk: true })
- * const off = emitter.on((result) => result.status)
- * ```
- *
- * @example
- * ```ts
- * const emitter = new Emitter({ emitError: true })
- * emitter.on((result, off) => {
- * 	if (result.status === 'error') off()
- * })
- * ```
+ * Each delivery uses the subscribers present at its start. New subscriptions
+ * take effect on the next delivery; removing a subscriber does not cancel a call
+ * already included in the current delivery. Synchronous callback exceptions are
+ * reported through `console.error` without preventing later callbacks from running.
  */
-export class Emitter {
+export const Emitter = Object.freeze({
 	/**
-	 * Event target that owns listener dispatch.
-	 */
-	private readonly _target = new EventTarget()
-
-	/**
-	 * Maps public handlers to event listener adapters.
-	 */
-	private readonly _listeners = new Map<Emitter.AnyFn, EventListener>()
-
-	/**
-	 * Optional predicate for default `ok` emissions.
-	 */
-	public readonly emitOk?: Emitter.EmitByDefaultOptionPredicat
-
-	/**
-	 * Optional predicate for default `error` emissions.
-	 */
-	public readonly emitError?: Emitter.EmitByDefaultOptionPredicat
-
-	/**
-	 * Creates an emitter with automatic emission options.
+	 * Internal callback registrations shared by the public subscription operations.
 	 *
-	 * @param options
-	 * Required options that enable or filter automatic ok and error emissions.
+	 * @internal
 	 */
-	constructor(options: Emitter.Options) {
-		if (options.emitOk) this.emitOk = this._emitPredicate(options.emitOk)
-		if (options.emitError) this.emitError = this._emitPredicate(options.emitError)
-	}
+	subscribers: new Map<Emitter.SubscriberCallback, (result: ResultAny) => void>(),
 
 	/**
-	 * Subscribes to synchronous result copies.
-	 * All listeners in one emission receive the same frozen instance.
+	 * Observes future results without replaying previously created results.
+	 * Registering the same callback again keeps one subscription and supplies a new
+	 * unsubscribe function. Any returned unsubscribe function for that callback
+	 * removes its current registration, including a later registration.
 	 *
-	 * @param handler
-	 * Callback invoked for each emitted result. The second argument unsubscribes
-	 * the same handler.
+	 * @param cb
+	 * Callback responsible for filtering results and managing its subscription.
 	 *
 	 * @returns
-	 * Function that removes the handler.
+	 * Idempotent unsubscribe function, also passed to the callback.
 	 *
 	 * @example
 	 * ```ts
-	 * const emitter = new Emitter({ emitOk: true })
-	 * const off = emitter.on((result) => result.status)
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * const emitter = new Emitter({ emitOk: true })
-	 * emitter.on((result, off) => {
-	 * 	if (result.status === 'ok') off()
+	 * const off = Emitter.subscribe((result, unsubscribe) => {
+	 * 	if (result.status !== 'error') return
+	 * 	unsubscribe()
+	 * 	console.error(result.data)
 	 * })
-	 * ```
-	 */
-	public on(handler: Emitter.Handler<'on'>): () => void {
-		const off = () => this.off(handler)
-		const adapter: EventListener = (event) => handler((event as CustomEvent<ResultAny>).detail, off)
-		const currentAdapter = this._listeners.get(handler)
-
-		if (currentAdapter) this._target.removeEventListener('emit', currentAdapter)
-		this._listeners.set(handler, adapter)
-		this._target.addEventListener('emit', adapter)
-
-		return off
-	}
-
-	/**
-	 * Removes a previously registered handler.
-	 *
-	 * @param handler
-	 * Handler to remove from this emitter.
-	 *
-	 * @example
-	 * ```ts
-	 * const emitter = new Emitter({})
-	 * const off = emitter.on(() => undefined)
 	 * off()
 	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * const emitter = new Emitter({})
-	 * const handler = (result: ResultAny) => result.status
-	 * emitter.on(handler)
-	 * emitter.off(handler)
-	 * ```
 	 */
-	public off(handler: Emitter.Handler<'on'> | Emitter.Handler<'off'>): void {
-		const adapter = this._listeners.get(handler)
-		if (!adapter) return
-
-		this._target.removeEventListener('emit', adapter)
-		this._listeners.delete(handler)
-	}
+	subscribe(cb: Emitter.SubscriberCallback): () => void {
+		const unsubscribe = () => this.unsubscribe(cb)
+		this.subscribers.set(cb, (result) => cb(result, unsubscribe))
+		return unsubscribe
+	},
 
 	/**
-	 * Removes every registered handler from this emitter.
+	 * Removes the callback's current subscription; unknown callbacks are ignored.
+	 * A callback already included in an ongoing delivery still receives that result.
 	 *
-	 * @example
-	 * ```ts
-	 * const emitter = new Emitter({})
-	 * emitter.offAll()
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * const emitter = new Emitter({})
-	 * emitter.on(() => undefined)
-	 * emitter.offAll()
-	 * ```
+	 * @param callback
+	 * Exact function reference used when subscribing.
 	 */
-	public offAll(): void {
-		this._listeners.forEach((_, handler) => this.off(handler))
-	}
+	unsubscribe(callback: Emitter.SubscriberCallback) {
+		this.subscribers.delete(callback)
+	},
 
 	/**
-	 * Synchronously emits a new frozen `Result` sharing the source payload.
-	 * Creating the copy does not trigger automatic emission.
+	 * Delivers a result synchronously to the subscribers present at delivery start.
+	 * Does not create result wrappers. Results created by callbacks cause nested
+	 * deliveries unless their construction explicitly uses `emit: false`.
 	 *
 	 * @param result
-	 * Result instance to dispatch.
+	 * Fully initialized, shallow-frozen result to deliver.
 	 *
-	 * @example
-	 * ```ts
-	 * const emitter = new Emitter({})
-	 * emitter.emit(ResultOk({ data: 1 }))
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * const emitter = new Emitter({})
-	 * emitter.emit(ResultError({ tag: 'Failure', data: 'broken' }))
-	 * ```
+	 * @internal
 	 */
-	public emit(result: ResultAny): void {
-		const copiedResult = new Result({ status: result.status, tag: result.tag, data: result.data, emit: false })
-		const event = new CustomEvent('emit', { detail: copiedResult })
-		this._target.dispatchEvent(event)
-	}
-
-	/**
-	 * Normalizes emitter option values into predicates.
-	 *
-	 * @param value
-	 * Boolean or predicate option.
-	 *
-	 * @returns
-	 * Predicate form of the option.
-	 */
-	private _emitPredicate(value: Emitter.EmitByDefaultOption): Emitter.EmitByDefaultOptionPredicat {
-		return typeof value === 'function' ? value : () => value
-	}
-}
+	runSubscribers(result: ResultAny) {
+		const iterator = this.subscribers.values()
+		Array.from(iterator).forEach((handler) => {
+			try { handler(result) }
+			catch (error) { console.error('Result Emitter Subscriber Execution Error:', error) }
+		})
+	},
+})

@@ -19,6 +19,6 @@ export type ResultExtract<
 > =
 	[V, S, T] extends [unknown, unknown, unknown]
 		? [T] extends [never]
-			? Extract<V, Result<{ status: S, tag: Result.AnyTag, data: Result.AnyData }>>
-			: Extract<V, Result<{ status: S, tag: T, data: Result.AnyData }>>
+			? Extract<V, Result<{ status: S, tag: Result.Tag, data: Result.Data }>>
+			: Extract<V, Result<{ status: S, tag: T, data: Result.Data }>>
 		: never

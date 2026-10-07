@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { Flow, Result, Runtime, Utils } from '../../src/namespaces/index'
-import { Emitter } from '../../src/classes/emitter'
 import { ResultOk } from '../../src/operations/result-ok'
 import { ResultError } from '../../src/operations/result-error'
 import { ResultOkFrom } from '../../src/operations/result-ok-from'
@@ -10,8 +9,8 @@ import { ResultErrorFromUnlessOk } from '../../src/operations/result-error-from-
 import { ResultIs } from '../../src/operations/result-is'
 import { ResultIsOk } from '../../src/operations/result-is-ok'
 import { ResultIsError } from '../../src/operations/result-is-error'
-import { ResultEmittersAdd } from '../../src/operations/result-emitters-add'
-import { ResultEmittersDelete } from '../../src/operations/result-emitters-delete'
+import { ResultEmitterSubscribe } from '../../src/operations/result-emitter-subscribe'
+import { ResultEmitterUnsubscribe } from '../../src/operations/result-emitter-unsubscribe'
 import { FlowTrySync } from '../../src/operations/flow-try-sync'
 import { FlowTryAsync } from '../../src/operations/flow-try-async'
 import { FlowFunctionSync } from '../../src/operations/flow-function-sync'
@@ -38,9 +37,8 @@ describe('public namespaces', () => {
 		{ name: 'Result.Is', alias: Result.Is, direct: ResultIs },
 		{ name: 'Result.IsOk', alias: Result.IsOk, direct: ResultIsOk },
 		{ name: 'Result.IsError', alias: Result.IsError, direct: ResultIsError },
-		{ name: 'Result.Emitters.Emitter', alias: Result.Emitters.Emitter, direct: Emitter },
-		{ name: 'Result.Emitters.Add', alias: Result.Emitters.Add, direct: ResultEmittersAdd },
-		{ name: 'Result.Emitters.Delete', alias: Result.Emitters.Delete, direct: ResultEmittersDelete },
+		{ name: 'Result.Emitter.Subscribe', alias: Result.Emitter.Subscribe, direct: ResultEmitterSubscribe },
+		{ name: 'Result.Emitter.Unsubscribe', alias: Result.Emitter.Unsubscribe, direct: ResultEmitterUnsubscribe },
 		{ name: 'Flow.Try.Sync', alias: Flow.Try.Sync, direct: FlowTrySync },
 		{ name: 'Flow.Try.Async', alias: Flow.Try.Async, direct: FlowTryAsync },
 		{ name: 'Flow.Function.Sync', alias: Flow.Function.Sync, direct: FlowFunctionSync },
@@ -68,5 +66,9 @@ describe('public namespaces', () => {
 		expect(Object.keys(Flow.Try).sort()).toEqual(['Async', 'Sync'])
 		expect(Object.keys(Flow.Function).sort()).toEqual(['Async', 'Sync'])
 		expect(Object.keys(Flow.Match).sort()).toEqual(['Loose', 'Strict'])
+	})
+
+	it('exposes subscription operations in the Result.Emitter namespace', () => {
+		expect(Object.keys(Result.Emitter).sort()).toEqual(['Subscribe', 'Unsubscribe'])
 	})
 })
