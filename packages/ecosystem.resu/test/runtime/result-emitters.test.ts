@@ -1,419 +1,320 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Emitter } from '../../src/classes/emitter'
 import { Flow, Result } from '../../src/namespaces/index'
+import { Emitter } from '../../src/classes/emitter'
+import { Result as ResultClass } from '../../src/classes/result'
+import { ResultEmitterSubscribe } from '../../src/operations/result-emitter-subscribe'
+import { ResultEmitterUnsubscribe } from '../../src/operations/result-emitter-unsubscribe'
 import { expectOkResult, expectResult } from './helpers/result-assertions'
 
-describe('Emitter subscriptions', () => {
+describe('Result.Emitter subscriptions', () => {
 	it.each([
 		{ status: 'ok', make: Result.Ok },
 		{ status: 'error', make: Result.Error },
-	] as const)('delivers one frozen shallow $status copy synchronously to all subscribers', ({ status, make }) => {
-		const emitter = new Emitter({})
-		const first = vi.fn()
+	] as const)('delivers the original frozen $status result synchronously to all subscribers', ({ status, make }) => {
+		const first = vi.fn((result: Result.Any) => {
+			expect(Object.isFrozen(result)).toBe(true)
+		})
 		const second = vi.fn()
-		emitter.on(first)
-		emitter.on(second)
+		Result.Emitter.Subscribe(first)
+		Result.Emitter.Subscribe(second)
 		const data = { nested: { count: 1 } }
 		const input = make({ tag: 'Observed', data })
-		emitter.emit(input)
-		const snapshot = first.mock.calls[0]?.[0] as typeof input
-		expect(first).toHaveBeenCalledExactlyOnceWith(snapshot, expect.any(Function))
-		expect(second).toHaveBeenCalledExactlyOnceWith(snapshot, expect.any(Function))
-		expectResult(snapshot, { status, tag: 'Observed', data })
-		expect(snapshot).not.toBe(input)
-		expect(snapshot.data).toBe(data)
-		expect(snapshot.data.nested).toBe(data.nested)
-		expect(second.mock.calls[0]?.[0]).toBe(snapshot)
-		expect(Object.getPrototypeOf(snapshot)).toBe(Object.getPrototypeOf(input))
-		expect(Object.isFrozen(snapshot)).toBe(true)
-		expect(Result.Is(snapshot)).toBe(true)
-		expect(Result.IsOk(snapshot)).toBe(status === 'ok')
-		expect(Result.IsError(snapshot)).toBe(status === 'error')
+		expect(first).toHaveBeenCalledExactlyOnceWith(input, expect.any(Function))
+		expect(second).toHaveBeenCalledExactlyOnceWith(input, expect.any(Function))
+		expectResult(first.mock.calls[0]?.[0], { status, tag: 'Observed', data })
+		expect(second.mock.calls[0]?.[0]).toBe(input)
+		expect(input.data).toBe(data)
+		expect(input.data.nested).toBe(data.nested)
 	})
 
-	it('protects result fields while sharing payload changes with the source and other listeners', () => {
-		const emitter = new Emitter({})
+	it('protects result fields while sharing payload changes with later subscribers', () => {
 		const data = { nested: { count: 1 } }
-		const input = Result.Ok({ tag: 'Original', data })
-		const second = vi.fn()
 		const fieldWrites: boolean[] = []
-		emitter.on((snapshot) => {
-			fieldWrites.push(Reflect.set(snapshot, 'status', 'error'))
-			fieldWrites.push(Reflect.set(snapshot, 'tag', 'Observed'))
-			fieldWrites.push(Reflect.set(snapshot, 'data', {}))
-			const copiedData = snapshot.data as typeof data
-			copiedData.nested.count = 2
+		const second = vi.fn()
+		Result.Emitter.Subscribe((result) => {
+			fieldWrites.push(Reflect.set(result, 'status', 'error'))
+			fieldWrites.push(Reflect.set(result, 'tag', 'Changed'))
+			fieldWrites.push(Reflect.set(result, 'data', {}))
+			const payload = result.data as typeof data
+			payload.nested.count = 2
 		})
-		emitter.on(second)
-		emitter.emit(input)
+		Result.Emitter.Subscribe(second)
+		const input = Result.Ok({ tag: 'Original', data })
 		expect(fieldWrites).toEqual([false, false, false])
-		const copy = expectOkResult(second.mock.calls[0]?.[0], { tag: 'Original', data: { nested: { count: 2 } } })
-		expect(copy).not.toBe(input)
-		expect(copy.data).toBe(data)
+		expect(second).toHaveBeenCalledExactlyOnceWith(input, expect.any(Function))
 		expectOkResult(input, { tag: 'Original', data: { nested: { count: 2 } } })
+		expect(input.data).toBe(data)
 	})
 
-	it('creates a fresh result wrapper sharing the same payload for each emission', () => {
-		const emitter = new Emitter({})
+	it('starts observing at subscription time without replaying earlier results', () => {
+		Result.Ok({ data: 'before' })
 		const listener = vi.fn()
-		emitter.on(listener)
-		const data = { count: 1 }
-		const input = Result.Ok({ data })
-		emitter.emit(input)
-		data.count = 2
-		emitter.emit(input)
-		const first = listener.mock.calls[0]?.[0] as typeof input
-		const second = listener.mock.calls[1]?.[0] as typeof input
-		expect(first).not.toBe(second)
-		expect(first.data).toBe(data)
-		expect(second.data).toBe(data)
-		expect(first.data.count).toBe(2)
-		expect(second.data.count).toBe(2)
+		const off = Result.Emitter.Subscribe(listener)
+		expect(listener).not.toHaveBeenCalled()
+		const success = Result.Ok({ data: 1 })
+		const failure = Result.Error({ data: 2 })
+		expect(listener.mock.calls).toEqual([[success, off], [failure, off]])
 	})
 
 	it('preserves function payload identity', () => {
-		const emitter = new Emitter({})
 		const listener = vi.fn()
-		emitter.on(listener)
-		const input = Result.Ok({ data: () => 1 })
-		emitter.emit(input)
-		expect(listener).toHaveBeenCalledTimes(1)
-		const copy = expectOkResult(listener.mock.calls[0]?.[0], { tag: null, data: input.data })
-		expect(copy.data).toBe(input.data)
+		const off = Result.Emitter.Subscribe(listener)
+		const data = () => 1
+		const input = Result.Ok({ data })
+		expect(listener).toHaveBeenCalledExactlyOnceWith(input, off)
+		expect(input.data).toBe(data)
 	})
 
-	it('passes the returned unsubscribe function to its handler', () => {
-		const emitter = new Emitter({})
-		const listener = vi.fn()
-		const unsubscribe = emitter.on(listener)
-		emitter.emit(Result.Ok({ data: 1 }))
-		expect(listener.mock.calls[0]?.[1]).toBe(unsubscribe)
+	it('allows consumers to filter results in the callback', () => {
+		const errors = vi.fn()
+		Result.Emitter.Subscribe((result) => {
+			if (result.status === 'error') errors(result)
+		})
+		Result.Ok({ data: 1 })
+		const failure = Result.Error({ tag: 'Failure', data: 2 })
+		expect(errors).toHaveBeenCalledExactlyOnceWith(failure)
 	})
 
-	it('supports self-unsubscription during emission', () => {
-		const emitter = new Emitter({})
+	it('passes the returned unsubscribe function to the callback', () => {
+		const listener = vi.fn()
+		const off = Result.Emitter.Subscribe(listener)
+		const input = Result.Ok()
+		expect(listener).toHaveBeenCalledExactlyOnceWith(input, off)
+	})
+
+	it('supports self-unsubscription through the callback argument', () => {
 		const listener = vi.fn((_result: Result.Any, off: () => void) => off())
-		emitter.on(listener)
-		emitter.emit(Result.Ok({ data: 1 }))
-		emitter.emit(Result.Ok({ data: 2 }))
-		expect(listener).toHaveBeenCalledTimes(1)
+		const off = Result.Emitter.Subscribe(listener)
+		const first = Result.Ok({ data: 1 })
+		Result.Error({ data: 2 })
+		expect(listener).toHaveBeenCalledExactlyOnceWith(first, off)
 	})
 
-	it('makes unsubscribe idempotent and keeps other listeners', () => {
-		const emitter = new Emitter({})
+	it('lets consumers unsubscribe on the first matching result before creating a nested result', () => {
+		const errors = vi.fn()
+		Result.Emitter.Subscribe((result, off) => {
+			if (result.status !== 'error') return
+			off()
+			errors(result)
+			Result.Error({ tag: 'Nested' })
+		})
+		Result.Ok()
+		const failure = Result.Error({ tag: 'Failure' })
+		Result.Error({ tag: 'Later' })
+		expect(errors).toHaveBeenCalledExactlyOnceWith(failure)
+	})
+
+	it('makes unsubscribe idempotent and preserves other subscribers', () => {
 		const removed = vi.fn()
 		const remaining = vi.fn()
-		const off = emitter.on(removed)
-		emitter.on(remaining)
+		const off = Result.Emitter.Subscribe(removed)
+		const remainingOff = Result.Emitter.Subscribe(remaining)
 		off()
 		off()
-		emitter.emit(Result.Ok({ data: 1 }))
+		const input = Result.Ok({ data: 1 })
 		expect(removed).not.toHaveBeenCalled()
-		expect(remaining).toHaveBeenCalledTimes(1)
+		expect(remaining).toHaveBeenCalledExactlyOnceWith(input, remainingOff)
 	})
 
-	it('removes a listener by identity', () => {
-		const emitter = new Emitter({})
+	it('removes a subscriber by callback identity and ignores unknown callbacks', () => {
+		const removed = vi.fn()
+		const remaining = vi.fn()
+		Result.Emitter.Subscribe(removed)
+		const off = Result.Emitter.Subscribe(remaining)
+		Result.Emitter.Unsubscribe(vi.fn())
+		Result.Emitter.Unsubscribe(removed)
+		const input = Result.Ok({ data: 1 })
+		expect(removed).not.toHaveBeenCalled()
+		expect(remaining).toHaveBeenCalledExactlyOnceWith(input, off)
+	})
+
+	it('keeps one subscription for a callback and passes the latest unsubscribe function', () => {
 		const listener = vi.fn()
-		emitter.on(listener)
-		emitter.off(listener)
-		emitter.emit(Result.Ok({ data: 1 }))
-		expect(listener).not.toHaveBeenCalled()
+		const originalOff = Result.Emitter.Subscribe(listener)
+		const currentOff = Result.Emitter.Subscribe(listener)
+		const first = Result.Ok()
+		const second = Result.Error()
+		expect(listener.mock.calls).toEqual([[first, currentOff], [second, currentOff]])
+		expect(currentOff).not.toBe(originalOff)
+		originalOff()
+		currentOff()
+		Result.Ok()
+		expect(listener).toHaveBeenCalledTimes(2)
 	})
 
-	it('ignores removal of an unknown listener', () => {
-		const emitter = new Emitter({})
+	it('allows a removed callback to subscribe again', () => {
 		const listener = vi.fn()
-		emitter.on(listener)
-		emitter.off(vi.fn())
-		emitter.emit(Result.Ok({ data: 1 }))
-		expect(listener).toHaveBeenCalledTimes(1)
+		Result.Emitter.Subscribe(listener)()
+		Result.Ok({ data: 'hidden' })
+		const off = Result.Emitter.Subscribe(listener)
+		const input = Result.Ok({ data: 'visible' })
+		expect(listener).toHaveBeenCalledExactlyOnceWith(input, off)
 	})
 
-	it('replaces duplicate subscriptions for the same handler', () => {
-		const emitter = new Emitter({})
-		const listener = vi.fn()
-		emitter.on(listener)
-		emitter.on(listener)
-		emitter.emit(Result.Ok({ data: 1 }))
-		expect(listener).toHaveBeenCalledTimes(1)
-	})
-
-	it('removes every listener and allows new subscriptions afterwards', () => {
-		const emitter = new Emitter({})
-		const oldListener = vi.fn()
-		const newListener = vi.fn()
-		emitter.on(oldListener)
-		emitter.offAll()
-		emitter.offAll()
-		emitter.on(newListener)
-		emitter.emit(Result.Ok({ data: 1 }))
-		expect(oldListener).not.toHaveBeenCalled()
-		expect(newListener).toHaveBeenCalledTimes(1)
-	})
-
-	it('keeps subscriptions on different emitter instances independent', () => {
-		const first = new Emitter({})
-		const second = new Emitter({})
-		const listener = vi.fn()
-		first.on(listener)
-		second.emit(Result.Ok({ data: 1 }))
-		expect(listener).not.toHaveBeenCalled()
-	})
-
-	it('allows manual emission regardless of default filters', () => {
-		const emitter = new Emitter({ emitOk: false })
-		const listener = vi.fn()
-		emitter.on(listener)
-		const input = Result.Ok({ data: 1, emit: false })
-		emitter.emit(input)
-		expect(listener).toHaveBeenCalledTimes(1)
-		expectOkResult(listener.mock.calls[0]?.[0], { tag: null, data: 1 })
-		expect(listener.mock.calls[0]?.[0]).not.toBe(input)
+	it('shares subscribers between namespace, direct operations, and the emitter', () => {
+		const direct = vi.fn()
+		const shared = vi.fn()
+		const directOff = ResultEmitterSubscribe(direct)
+		const sharedOff = Emitter.subscribe(shared)
+		const first = Result.Ok({ data: 1 })
+		expect(direct).toHaveBeenCalledExactlyOnceWith(first, directOff)
+		expect(shared).toHaveBeenCalledExactlyOnceWith(first, sharedOff)
+		Result.Emitter.Unsubscribe(direct)
+		ResultEmitterUnsubscribe(shared)
+		Result.Ok({ data: 2 })
+		expect(direct).toHaveBeenCalledTimes(1)
+		expect(shared).toHaveBeenCalledTimes(1)
 	})
 })
 
-describe('Result.Emitters registration', () => {
+describe('Result.Emitter delivery', () => {
+	it('calls subscribers in registration order', () => {
+		const order: string[] = []
+		Result.Emitter.Subscribe(() => order.push('first'))
+		Result.Emitter.Subscribe(() => order.push('second'))
+		Result.Ok()
+		expect(order).toEqual(['first', 'second'])
+	})
+
+	it('starts notifying subscriptions added during delivery with the next result', () => {
+		const late = vi.fn()
+		Result.Emitter.Subscribe((_result, off) => {
+			off()
+			Result.Emitter.Subscribe(late)
+		})
+		Result.Ok({ tag: 'Current' })
+		expect(late).not.toHaveBeenCalled()
+		const next = Result.Error({ tag: 'Next' })
+		expect(late).toHaveBeenCalledExactlyOnceWith(next, expect.any(Function))
+	})
+
+	it('still notifies subscribers removed after the current delivery has started', () => {
+		const removed = vi.fn()
+		Result.Emitter.Subscribe(() => Result.Emitter.Unsubscribe(removed))
+		const off = Result.Emitter.Subscribe(removed)
+		const current = Result.Ok()
+		Result.Error()
+		expect(removed).toHaveBeenCalledExactlyOnceWith(current, off)
+	})
+
+	it('does not repeat the current delivery when a subscriber removes and registers itself again', () => {
+		const listener = vi.fn((_result: Result.Any, off: () => void) => {
+			// Bound re-entry so a live-collection regression cannot loop indefinitely.
+			if (listener.mock.calls.length === 1) {
+				off()
+				Result.Emitter.Subscribe(listener)
+			}
+		})
+		Result.Emitter.Subscribe(listener)
+		const first = Result.Ok()
+		expect(listener).toHaveBeenCalledTimes(1)
+		const second = Result.Error()
+		expect(listener.mock.calls.map(([result]) => result)).toEqual([first, second])
+	})
+
+	it('logs synchronous callback exceptions and continues delivery without creating service results', () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+		const failure = new Error('subscriber failed')
+		const broken = vi.fn(() => { throw failure })
+		const healthy = vi.fn()
+		const brokenOff = Result.Emitter.Subscribe(broken)
+		const healthyOff = Result.Emitter.Subscribe(healthy)
+		let input: Result.Any | undefined
+		expect(() => { input = Result.Ok({ tag: 'Observed' }) }).not.toThrow()
+		expect(broken).toHaveBeenCalledExactlyOnceWith(input, brokenOff)
+		expect(healthy).toHaveBeenCalledExactlyOnceWith(input, healthyOff)
+		expect(log).toHaveBeenCalledExactlyOnceWith('Result Emitter Subscriber Execution Error:', failure)
+	})
+
+	it('ignores callback return values, including error results with emission suppressed', () => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+		const returned = Result.Error({ tag: 'Returned', emit: false })
+		const listener = vi.fn(() => returned)
+		const other = vi.fn()
+		const off = Result.Emitter.Subscribe(listener)
+		const otherOff = Result.Emitter.Subscribe(other)
+		const input = Result.Ok()
+		expect(listener).toHaveBeenCalledExactlyOnceWith(input, off)
+		expect(other).toHaveBeenCalledExactlyOnceWith(input, otherOff)
+		expect(log).not.toHaveBeenCalled()
+	})
+
+	it('does not await returned promises before notifying the next subscriber', async () => {
+		const order: string[] = []
+		const completed: Promise<void>[] = []
+		Result.Emitter.Subscribe(() => {
+			order.push('started')
+			completed.push(Promise.resolve().then(() => { order.push('completed') }))
+			return completed[0]
+		})
+		Result.Emitter.Subscribe(() => { order.push('next') })
+		Result.Ok()
+		expect(order).toEqual(['started', 'next'])
+		await Promise.all(completed)
+		expect(order).toEqual(['started', 'next', 'completed'])
+	})
+})
+
+describe('Result creation events', () => {
 	it.each([
 		{ status: 'ok', make: Result.Ok },
 		{ status: 'error', make: Result.Error },
-	] as const)('does not automatically emit the copied $status result again', ({ make }) => {
-		// Bound re-entry so a regression fails without overflowing the stack.
-		const predicate = vi.fn(() => predicate.mock.calls.length === 1)
-		const emitter = new Emitter({ emitOk: predicate, emitError: predicate })
+	] as const)('emits $status by default and with emit:true, but suppresses emit:false', ({ make }) => {
 		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		const input = make({ tag: 'Observed', data: 1 })
-		expect(predicate).toHaveBeenCalledExactlyOnceWith(input)
-		expect(listener).toHaveBeenCalledTimes(1)
-		expect(listener.mock.calls[0]?.[0]).not.toBe(input)
+		const off = Result.Emitter.Subscribe(listener)
+		make({ data: 'hidden', emit: false })
+		const defaultResult = make({ data: 'default' })
+		const explicitResult = make({ data: 'explicit', emit: true })
+		expect(listener.mock.calls).toEqual([[defaultResult, off], [explicitResult, off]])
 	})
 
-	it('starts observing results only after Add', () => {
-		const emitter = new Emitter({ emitOk: true, emitError: true })
+	it('observes direct Result construction', () => {
 		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Ok({ data: 'before' })
-		expect(listener).not.toHaveBeenCalled()
-		Result.Emitters.Add(emitter)
-		const success = Result.Ok({ data: 1 })
-		const failure = Result.Error({ data: 2 })
-		expect(listener).toHaveBeenCalledTimes(2)
-		expectResult(listener.mock.calls[0]?.[0], { status: 'ok', tag: null, data: 1 })
-		expectResult(listener.mock.calls[1]?.[0], { status: 'error', tag: null, data: 2 })
-		expect(listener.mock.calls[0]?.[0]).not.toBe(success)
-		expect(listener.mock.calls[1]?.[0]).not.toBe(failure)
-	})
-
-	it('registers the same emitter only once', () => {
-		const emitter = new Emitter({ emitOk: true })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		Result.Emitters.Add(emitter)
-		Result.Ok({ data: 1 })
-		expect(listener).toHaveBeenCalledTimes(1)
-	})
-
-	it('notifies multiple registered emitters', () => {
-		const first = new Emitter({ emitOk: true })
-		const second = new Emitter({ emitOk: true })
-		const firstListener = vi.fn()
-		const secondListener = vi.fn()
-		first.on(firstListener)
-		second.on(secondListener)
-		Result.Emitters.Add(first)
-		Result.Emitters.Add(second)
-		const input = Result.Ok({ data: { count: 1 } })
-		expect(firstListener).toHaveBeenCalledTimes(1)
-		expect(secondListener).toHaveBeenCalledTimes(1)
-		const firstSnapshot = firstListener.mock.calls[0]?.[0] as typeof input
-		const secondSnapshot = secondListener.mock.calls[0]?.[0] as typeof input
-		expect(firstSnapshot).not.toBe(input)
-		expect(secondSnapshot).not.toBe(input)
-		expect(firstSnapshot).not.toBe(secondSnapshot)
-		expect(firstSnapshot.data).toBe(input.data)
-		expect(secondSnapshot.data).toBe(input.data)
-	})
-
-	it('Delete stops automatic and manual delivery to previous listeners', () => {
-		const emitter = new Emitter({ emitOk: true })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		Result.Emitters.Delete(emitter)
-		Result.Emitters.Delete(emitter)
-		const input = Result.Ok({ data: 1 })
-		emitter.emit(input)
-		expect(listener).not.toHaveBeenCalled()
-	})
-
-	it('Delete preserves other registered emitters', () => {
-		const first = new Emitter({ emitOk: true })
-		const second = new Emitter({ emitOk: true })
-		const listener = vi.fn()
-		second.on(listener)
-		Result.Emitters.Add(first)
-		Result.Emitters.Add(second)
-		Result.Emitters.Delete(first)
-		Result.Ok({ data: 1 })
-		expect(listener).toHaveBeenCalledTimes(1)
-	})
-
-	it('ignores Delete for an emitter that was never registered', () => {
-		const emitter = new Emitter({})
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Delete(emitter)
-		emitter.emit(Result.Ok({ data: 1 }))
-		expect(listener).toHaveBeenCalledTimes(1)
-	})
-
-	it('can register a deleted emitter again with a new subscription', () => {
-		const emitter = new Emitter({ emitOk: true })
-		Result.Emitters.Add(emitter)
-		Result.Emitters.Delete(emitter)
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		Result.Ok({ data: 1 })
-		expect(listener).toHaveBeenCalledTimes(1)
-	})
-
-	it('works without a browser window global', () => {
-		vi.stubGlobal('window', undefined)
-		const emitter = new Emitter({ emitOk: true })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		Result.Ok({ data: 1 })
-		expect(listener).toHaveBeenCalledTimes(1)
-	})
-
-	it('works with a separate browser-like window context', () => {
-		vi.stubGlobal('window', {})
-		const emitter = new Emitter({ emitOk: true })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		Result.Ok({ data: 1 })
-		expect(listener).toHaveBeenCalledTimes(1)
-	})
-
-	it('publishes a frozen result copy sharing the original payload', () => {
-		const emitter = new Emitter({ emitOk: true })
-		const data = { nested: { count: 1 } }
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		const input = Result.Ok({ tag: 'Original', data })
-		const snapshot = expectOkResult(listener.mock.calls[0]?.[0], { tag: 'Original', data })
-		expect(snapshot).not.toBe(input)
-		expect(snapshot.data).toBe(data)
-		expect(Object.isFrozen(snapshot)).toBe(true)
-		expect(Object.isFrozen(input)).toBe(true)
-		expectOkResult(input, { tag: 'Original', data: { nested: { count: 1 } } })
-	})
-
-	it('automatically emits results with function payloads', () => {
-		const emitter = new Emitter({ emitOk: true })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		const input = Result.Ok({ data: () => 1 })
-		expect(listener).toHaveBeenCalledTimes(1)
-		const copy = expectOkResult(listener.mock.calls[0]?.[0], { tag: null, data: input.data })
-		expect(copy.data).toBe(input.data)
-	})
-})
-
-describe('automatic emission filters', () => {
-	it.each([
-		{ label: 'no options', options: {}, expected: [] },
-		{ label: 'ok only', options: { emitOk: true }, expected: ['ok'] },
-		{ label: 'error only', options: { emitError: true }, expected: ['error'] },
-		{ label: 'both statuses', options: { emitOk: true, emitError: true }, expected: ['ok', 'error'] },
-		{ label: 'both disabled', options: { emitOk: false, emitError: false }, expected: [] },
-	])('applies $label', ({ options, expected }) => {
-		const emitter = new Emitter(options)
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		Result.Ok({ data: 1 })
-		Result.Error({ data: 2 })
-		expect(listener.mock.calls.map(([result]) => (result as Result.Any).status)).toEqual(expected)
-	})
-
-	it('filters each status with its own predicate', () => {
-		const emitOk = vi.fn((result: Result.Any) => result.tag === 'Visible')
-		const emitError = vi.fn((result: Result.Any) => result.data === 'visible')
-		const emitter = new Emitter({ emitOk, emitError })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		const visibleOk = Result.Ok({ tag: 'Visible', data: 1 })
-		Result.Ok({ tag: 'Hidden', data: 2 })
-		const visibleError = Result.Error({ data: 'visible' })
-		Result.Error({ data: 'hidden' })
-		expect(listener).toHaveBeenCalledTimes(2)
-		expectResult(listener.mock.calls[0]?.[0], { status: 'ok', tag: 'Visible', data: 1 })
-		expectResult(listener.mock.calls[1]?.[0], { status: 'error', tag: null, data: 'visible' })
-		expect(emitOk).toHaveBeenCalledTimes(2)
-		expect(emitError).toHaveBeenCalledTimes(2)
-		expect(emitOk).toHaveBeenCalledWith(visibleOk)
-		expect(emitError).toHaveBeenCalledWith(visibleError)
-		expect(emitOk.mock.calls[0]?.[0]).toBe(visibleOk)
-		expect(emitError.mock.calls[0]?.[0]).toBe(visibleError)
-	})
-
-	it('emit:true bypasses a disabled predicate', () => {
-		const predicate = vi.fn(() => false)
-		const emitter = new Emitter({ emitOk: predicate })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		const input = Result.Ok({ data: 1, emit: true })
-		const copy = expectOkResult(listener.mock.calls[0]?.[0], { tag: null, data: 1 })
-		expect(listener).toHaveBeenCalledExactlyOnceWith(copy, expect.any(Function))
-		expect(listener.mock.calls[0]?.[0]).not.toBe(input)
-		expect(predicate).not.toHaveBeenCalled()
-	})
-
-	it('emit:false suppresses delivery and predicate evaluation', () => {
-		const predicate = vi.fn(() => true)
-		const emitter = new Emitter({ emitOk: predicate, emitError: predicate })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
-		Result.Ok({ data: 1, emit: false })
-		Result.Error({ data: 2, emit: false })
-		expect(() => Result.Ok({ data: () => 1, emit: false })).not.toThrow()
-		expect(listener).not.toHaveBeenCalled()
-		expect(predicate).not.toHaveBeenCalled()
+		const off = Result.Emitter.Subscribe(listener)
+		const input = new ResultClass({ status: 'error', tag: 'Direct', data: 1 })
+		expect(listener).toHaveBeenCalledExactlyOnceWith(input, off)
 	})
 
 	it('observes conversion results without modifying the source', () => {
 		const source = Result.Error({ tag: 'Failure', data: 1 })
-		const emitter = new Emitter({ emitOk: true })
 		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
+		const off = Result.Emitter.Subscribe(listener)
 		const converted = Result.OkFrom(source)
-		expectOkResult(listener.mock.calls[0]?.[0], { tag: 'Failure', data: 1 })
-		expect(listener.mock.calls[0]?.[0]).not.toBe(converted)
-		expect(source.status).toBe('error')
+		expect(listener).toHaveBeenCalledExactlyOnceWith(converted, off)
 		expectOkResult(converted, { tag: 'Failure', data: 1 })
+		expect(source.status).toBe('error')
+	})
+
+	it('lets consumers suppress nested results explicitly', () => {
+		const listener = vi.fn(() => {
+			// Bound re-entry so a regression fails without overflowing the stack.
+			if (listener.mock.calls.length === 1) Result.Error({ data: 'nested', emit: false })
+		})
+		const off = Result.Emitter.Subscribe(listener)
+		const input = Result.Ok({ data: 'outer' })
+		expect(listener).toHaveBeenCalledExactlyOnceWith(input, off)
+	})
+
+	it('delivers nested results when the consumer leaves emission enabled', () => {
+		const seen: Result.Any[] = []
+		let nested: Result.Any | undefined
+		Result.Emitter.Subscribe((result) => {
+			seen.push(result)
+			if (result.tag === 'Outer') nested = Result.Error({ tag: 'Nested' })
+		})
+		const outer = Result.Ok({ tag: 'Outer' })
+		expect(seen).toEqual([outer, nested])
+		expectResult(nested, { status: 'error', tag: 'Nested', data: null })
 	})
 
 	it('does not emit a late AbortError after an operation has completed', async () => {
-		const emitter = new Emitter({ emitError: true })
-		const listener = vi.fn()
-		emitter.on(listener)
-		Result.Emitters.Add(emitter)
+		const errors = vi.fn()
+		Result.Emitter.Subscribe((result) => {
+			if (result.status === 'error') errors(result)
+		})
 		const controller = new AbortController()
 		await Flow.Try.Async({ signal: controller.signal, try: () => 1 })
 		controller.abort()
-		expect(listener).not.toHaveBeenCalled()
+		expect(errors).not.toHaveBeenCalled()
 	})
 })

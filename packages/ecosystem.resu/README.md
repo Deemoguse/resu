@@ -20,7 +20,7 @@ Use `resu` when failure is an expected outcome of an operation, such as validati
 - [Safe functions: Flow.Function](#safe-functions-flowfunction)
 - [Matching: Flow.Match](#matching-flowmatch)
 - [Sequential computations: Runtime](#sequential-computations-runtime)
-- [Observing Result values: emitters](#observing-result-values-emitters)
+- [Observing Result values: Emitter](#observing-result-values-emitter)
 - [Types and utilities](#types-and-utilities)
 - [Subpath imports](#subpath-imports)
 - [WIP limitations](#wip-limitations)
@@ -42,7 +42,7 @@ npm install @wambata/resu
 | ESM | Available through `import` |
 | CommonJS | Available through `require` |
 | TypeScript | Type declarations are included in the package |
-| Browser | Compatibility is not guaranteed yet; emitters and cancellation require `EventTarget`, `CustomEvent`, `AbortSignal`, and `AbortController` |
+| Browser | Compatibility is not guaranteed yet; cancellation requires `AbortSignal` and `AbortController` |
 
 For most use cases, import the namespaces from the root entry point:
 
@@ -114,7 +114,7 @@ This example prints `dark`. Invalid JSON returns `InvalidJson`, while valid JSON
 | Create a reusable safe function | `Flow.Function` |
 | Transform a result by status or tag | `Flow.Match` |
 | Run dependent steps with early exit | `Runtime.Gen` and `Runtime.Unwrap*` |
-| Observe created results | `Result.Emitters` |
+| Observe created results | `Result.Emitter.Subscribe` |
 
 ## The `Result` model
 
@@ -799,103 +799,90 @@ const asyncResult = await Runtime.Gen.Async(async function* () {
 
 A thrown exception or rejected Promise becomes `RuntimeError`. Use synchronous `Unwrap` variants only inside `Runtime.Gen.Sync`, and asynchronous variants only inside `Runtime.Gen.Async`.
 
-## Observing `Result` values: emitters
+## Observing `Result` values: Emitter
 
-Emitters provide a central way to observe created `Result` values, for example for logging or diagnostics. Create an emitter, subscribe to it, and register it:
+Use `Result.Emitter` to observe newly created results for logging or diagnostics. Subscribe directly; the callback decides which results to handle.
 
 | Operation | Purpose |
 |---|---|
-| `new Result.Emitters.Emitter(options)` | Create an emitter with automatic emission rules |
-| `Result.Emitters.Add(emitter)` | Register an emitter |
-| `Result.Emitters.Delete(emitter)` | Remove an emitter and clear its subscriptions |
-| `emitter.on(handler)` | Subscribe and receive an unsubscribe function |
-| `emitter.emit(result)` | Emit a specific `Result` manually |
-| `emitter.off(handler)` | Remove one subscription |
-| `emitter.offAll()` | Remove all subscriptions |
+| `Result.Emitter.Subscribe(callback)` | Observe future results and receive an unsubscribe function |
+| `Result.Emitter.Unsubscribe(callback)` | Remove the subscription using the same callback reference |
+| `off()` | Remove the callback's current subscription; repeated calls are safe |
+
+`Subscribe` accepts only a callback. The callback receives `(result, off)`, where `off` is the same function returned by `Subscribe`.
 
 ```ts
 import { Result } from '@wambata/resu'
 
-const emitter = new Result.Emitters.Emitter({
-	emitError: true,
+const off = Result.Emitter.Subscribe((result) => {
+	if (result.status !== 'error') return
+	console.error(result.tag, result.data)
 })
 
-const off = emitter.on((result) => {
-	console.log(result.status, result.tag, result.data)
-})
-
-Result.Emitters.Add(emitter)
-
-Result.Error({
-	tag: 'SaveFailed',
-	data: { id: 42 },
-})
+Result.Ok({ tag: 'Saved', data: { id: 42 } }) // callback ignores this result
+Result.Error({ tag: 'SaveFailed', data: { id: 42 } }) // logged
 
 off()
-Result.Emitters.Delete(emitter)
 ```
 
-`Result.Emitters.Add` enables automatic emission through this emitter. `Result.Emitters.Delete` removes it from the global list and clears its subscriptions.
+Subscribers run synchronously, before result construction returns. Every subscriber receives the original, shallow-frozen `Result` instance. Its fields are readonly, but `data` and nested payload objects retain their original references and mutability. Payload changes made by one subscriber are visible to later subscribers and to the caller.
 
-Listeners synchronously receive a new frozen `Result` instance with the source's `status`, `tag`, and `data`. The copy has a different reference from the source and is recognized by `Result.Is`, `Result.IsOk`, and `Result.IsError` according to its status.
+Subscriptions observe future creation events without replaying earlier results. Unsubscribe when observation is no longer needed.
 
-Copying is intentionally shallow: `data` is reused, including its nested objects. The result's fields are frozen and typed as `readonly`; this does not recursively freeze or make the payload readonly. Mutable payloads remain shared with the source and other listeners. Changes to a payload are visible through every result that references it. All listeners of one emitter receive the same copy for one emission; each new emission or separate emitter creates a new `Result` wrapper.
+### Filtering and subscription lifetime
 
-Payloads do not need to support structured cloning; functions and custom instances retain their identity. Creating the copy does not trigger another automatic emission. Automatic emission predicates receive the original result.
-
-Always remove an emitter when it is no longer needed. This is particularly important in long-running processes and tests.
-
-### Filtering automatic events
-
-The `emitOk` and `emitError` options accept either `true` or a predicate. The following emitter receives only `ok` values tagged `Audit` and all errors:
+Filter by status, tag, or payload inside the callback. To handle only the first matching result, unsubscribe before doing further work:
 
 ```ts
 import { Result } from '@wambata/resu'
 
-const audit = new Result.Emitters.Emitter({
-	emitOk: (result) => result.tag === 'Audit',
-	emitError: true,
+Result.Emitter.Subscribe((result, off) => {
+	if (result.status !== 'error') return
+
+	off()
+	console.error(result.tag, result.data)
 })
 
-Result.Emitters.Add(audit)
-
-Result.Ok({ tag: 'Audit', data: 'saved' })
-Result.Ok({ tag: 'Ignored', data: 'draft' }) // not emitted
-Result.Error({ tag: 'Failure', data: 'broken' })
-
-Result.Emitters.Delete(audit)
+Result.Ok({ tag: 'Ready' }) // subscription remains active
+Result.Error({ tag: 'FirstFailure' }) // logged, then no further notifications
+Result.Error({ tag: 'LaterFailure' }) // callback is no longer subscribed
 ```
 
-### Manual emission and local overrides
+Repeated registration of the same function keeps one subscription and supplies a new `off` function to the callback. Any previously returned `off` for that function removes its current subscription, including a later registration. Separate function references are separate subscribers.
 
-`emitter.emit(result)` emits a specific result manually. The `emit` option on an individual `Result` forces automatic emission on or off:
+There are no built-in `once`, `signal`, or status-filter options. Consumers manage filtering and lifetime explicitly.
+
+### Suppressing creation events
+
+Results notify subscribers by default, regardless of status. `emit: true` has the same behavior; `emit: false` suppresses notification for that result.
+
+Results created inside a subscriber normally cause a nested synchronous delivery. Use `emit: false` for subscriber-created results that should not generate further events:
 
 ```ts
 import { Result } from '@wambata/resu'
 
-const events = new Result.Emitters.Emitter({ emitError: true })
-
-Result.Emitters.Add(events)
-
-events.emit(Result.Ok({
-	tag: 'Manual',
-	data: 1,
-}))
-
-Result.Ok({
-	data: 'force emission',
-	emit: true,
+const off = Result.Emitter.Subscribe((result) => {
+	const diagnostic = Result.Ok({
+		tag: 'Diagnostic',
+		data: result.status,
+		emit: false,
+	})
+	console.log(diagnostic.data)
 })
 
-Result.Error({
-	data: 'suppress emission',
-	emit: false,
-})
-
-Result.Emitters.Delete(events)
+Result.Error({ tag: 'Failure' }) // prints 'error'; Diagnostic is not delivered
+off()
 ```
 
-`emitter.on()` returns an unsubscribe function and passes the same function to the handler as its second argument. For explicit subscription management, use `emitter.off(handler)` and `emitter.offAll()`.
+`emit: false` affects only that construction. Results created by other functions called from the subscriber need their own emission policy. Conversion and flow helpers can also create new results; suppression does not automatically carry over to them.
+
+### Delivery and errors
+
+Each delivery uses the subscribers present at its start, in registration order. A new subscription starts receiving results on the next delivery. A subscriber removed after delivery starts still receives the current result if its callback has not run yet. Removing and registering a callback again does not repeat its call in the current delivery.
+
+Synchronous callback exceptions are reported through `console.error('Result Emitter Subscriber Execution Error:', error)`. The original thrown value is logged; later subscribers continue running, and reporting the error does not create a service `Result`.
+
+Callback return values are ignored. Returned promises are not awaited, and their rejections are not handled by the emitter; handle asynchronous failures in the callback.
 
 ## Types and utilities
 
@@ -1039,7 +1026,7 @@ TypeScript resolves these declarations through imports; adding the package to `c
 | Safe functions | `flow-function-sync`, `flow-function-async` | `FlowFunctionSync`, `FlowFunctionAsync` |
 | Matching | `flow-match-loose`, `flow-match-strict` | `FlowMatchLoose`, `FlowMatchStrict` |
 | Runtime sequences | `runtime-gen-sync`, `runtime-gen-async`, `runtime-unwrap-sync`, `runtime-unwrap-async`, `runtime-unwrap-tagged-sync`, `runtime-unwrap-tagged-async` | `RuntimeGenSync`, `RuntimeGenAsync`, `RuntimeUnwrapSync`, `RuntimeUnwrapAsync`, `RuntimeUnwrapTaggedSync`, `RuntimeUnwrapTaggedAsync` |
-| Emitters | `emitter`, `result-emitters-add`, `result-emitters-delete` | `Emitter`, `ResultEmittersAdd`, `ResultEmittersDelete` |
+| Result events | `emitter` | `Emitter` (shared object with `subscribe` and `unsubscribe`) |
 | Result types | `result-any`, `result-any-ok`, `result-any-error`, `result-extract`, `result-extract-ok`, `result-extract-error`, `result-exclude`, `result-exclude-ok`, `result-exclude-error`, `flow-checked` | `ResultAny`, `ResultAnyOk`, `ResultAnyError`, `ResultExtract`, `ResultExtractOk`, `ResultExtractError`, `ResultExclude`, `ResultExcludeOk`, `ResultExcludeError`, `FlowChecked` |
 | Built-in errors | `utils/utils-error-runtime`, `utils/utils-error-abort` | `UtilsErrorRuntime`, `UtilsErrorAbort` |
 | Helper types | `utils/utils-source`, `utils/utils-non-undefined-source`, `utils/utils-non-undefined`, `utils/utils-non-empty-array` | `UtilsSource`, `UtilsNonUndefinedSource`, `UtilsNonUndefined`, `UtilsNonAmptyArray` |
@@ -1053,7 +1040,7 @@ Root namespaces are usually more convenient in application code. Subpath imports
 - A function passed to a synchronous or asynchronous flow must not return `undefined` or `void`; the types reject these contracts.
 - Use synchronous `Unwrap` variants inside `Runtime.Gen.Sync` and asynchronous variants inside `Runtime.Gen.Async`.
 - Browser compatibility is not guaranteed yet.
-- Emitters and cancellation require the environment to provide `EventTarget`, `CustomEvent`, `AbortSignal`, and `AbortController`.
+- Cancellation requires the environment to provide `AbortSignal` and `AbortController`.
 
 ## Support and contributing
 

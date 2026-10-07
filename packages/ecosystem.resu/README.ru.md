@@ -20,7 +20,7 @@
 - [Безопасные функции: Flow.Function](#безопасные-функции-flowfunction)
 - [Сопоставление: Flow.Match](#сопоставление-flowmatch)
 - [Последовательные вычисления: Runtime](#последовательные-вычисления-runtime)
-- [Наблюдение за Result: emitters](#наблюдение-за-result-emitters)
+- [Наблюдение за Result: Emitter](#наблюдение-за-result-emitter)
 - [Типы и утилиты](#типы-и-утилиты)
 - [Точечные импорты](#точечные-импорты)
 - [Ограничения WIP](#ограничения-wip)
@@ -42,7 +42,7 @@ npm install @wambata/resu
 | ESM | Доступен через `import` |
 | CommonJS | Доступен через `require` |
 | TypeScript | Декларации типов входят в пакет |
-| Браузер | Совместимость пока не гарантируется; emitters и отмена требуют `EventTarget`, `CustomEvent`, `AbortSignal` и `AbortController` |
+| Браузер | Совместимость пока не гарантируется; отмена требует `AbortSignal` и `AbortController` |
 
 Для большинства сценариев используйте пространства имён из корневого entry point:
 
@@ -114,7 +114,7 @@ else {
 | Создать переиспользуемую безопасную функцию | `Flow.Function` |
 | Преобразовать результат по статусу или тегу | `Flow.Match` |
 | Выполнить зависимые шаги с ранним выходом | `Runtime.Gen` и `Runtime.Unwrap*` |
-| Наблюдать за создаваемыми результатами | `Result.Emitters` |
+| Наблюдать за создаваемыми результатами | `Result.Emitter.Subscribe` |
 
 ## Модель `Result`
 
@@ -799,103 +799,90 @@ const asyncResult = await Runtime.Gen.Async(async function* () {
 
 Выброшенное исключение и отклонённый Promise становятся `RuntimeError`. Синхронные варианты `Unwrap` используйте только внутри `Runtime.Gen.Sync`, а асинхронные внутри `Runtime.Gen.Async`.
 
-## Наблюдение за `Result`: emitters
+## Наблюдение за `Result`: Emitter
 
-Emitters позволяют централизованно наблюдать за создаваемыми `Result`, например для журналирования или диагностики. Сначала создайте emitter, подпишитесь и зарегистрируйте его:
+Используйте `Result.Emitter` для наблюдения за созданием результатов, например для журналирования или диагностики. Подписывайтесь напрямую; callback сам выбирает, какие результаты обрабатывать.
 
 | Операция | Назначение |
 |---|---|
-| `new Result.Emitters.Emitter(options)` | Создать emitter с правилами автоматической отправки |
-| `Result.Emitters.Add(emitter)` | Зарегистрировать emitter |
-| `Result.Emitters.Delete(emitter)` | Удалить emitter и очистить его подписки |
-| `emitter.on(handler)` | Подписаться и получить функцию отписки |
-| `emitter.emit(result)` | Отправить конкретный `Result` вручную |
-| `emitter.off(handler)` | Удалить одну подписку |
-| `emitter.offAll()` | Удалить все подписки |
+| `Result.Emitter.Subscribe(callback)` | Подписаться на будущие результаты и получить функцию отписки |
+| `Result.Emitter.Unsubscribe(callback)` | Удалить подписку по той же ссылке на callback |
+| `off()` | Удалить текущую подписку callback; повторные вызовы безопасны |
+
+`Subscribe` принимает только callback. Его аргументы — `(result, off)`, где `off` — та же функция, которую возвращает `Subscribe`.
 
 ```ts
 import { Result } from '@wambata/resu'
 
-const emitter = new Result.Emitters.Emitter({
-	emitError: true,
+const off = Result.Emitter.Subscribe((result) => {
+	if (result.status !== 'error') return
+	console.error(result.tag, result.data)
 })
 
-const off = emitter.on((result) => {
-	console.log(result.status, result.tag, result.data)
-})
-
-Result.Emitters.Add(emitter)
-
-Result.Error({
-	tag: 'SaveFailed',
-	data: { id: 42 },
-})
+Result.Ok({ tag: 'Saved', data: { id: 42 } }) // callback игнорирует этот результат
+Result.Error({ tag: 'SaveFailed', data: { id: 42 } }) // выводится в журнал
 
 off()
-Result.Emitters.Delete(emitter)
 ```
 
-`Result.Emitters.Add` включает автоматическую отправку для этого emitter. `Result.Emitters.Delete` удаляет его из общего списка и очищает подписки.
+Слушатели вызываются синхронно, до завершения создания результата. Каждый слушатель получает исходный экземпляр `Result` с поверхностной заморозкой. Его поля доступны только для чтения, но `data` и вложенные объекты сохраняют исходные ссылки и изменяемость. Изменения данных одним слушателем видны следующим слушателям и вызывающему коду.
 
-Слушатели синхронно получают новый замороженный экземпляр `Result` с исходными `status`, `tag` и `data`. Ссылка копии отличается от исходной; `Result.Is`, `Result.IsOk` и `Result.IsError` распознают её в соответствии со статусом.
+Подписка получает будущие события создания; ранее созданные результаты не доставляются повторно. Отписывайтесь, когда наблюдение больше не требуется.
 
-Копирование намеренно поверхностное: `data` используется повторно, включая вложенные объекты. Поля результата заморожены и объявлены как `readonly`; это не замораживает данные рекурсивно и не делает их тип глубоко readonly. Изменяемые данные остаются общими для исходного результата и слушателей. Изменения данных видны через все результаты, которые на них ссылаются. Все слушатели одного emitter получают одну и ту же копию в рамках одной отправки; новая отправка или отдельный emitter создают новый экземпляр `Result`.
+### Фильтрация и время жизни подписки
 
-Данные не обязаны поддерживать структурное клонирование: функции и экземпляры пользовательских классов сохраняют свои ссылки. Создание копии не запускает повторную автоматическую отправку. Предикаты автоматической отправки получают исходный результат.
-
-Всегда удаляйте emitter, когда наблюдение больше не требуется. Это особенно важно для долгоживущих процессов и тестов.
-
-### Фильтрация автоматических событий
-
-Параметры `emitOk` и `emitError` принимают `true` либо функцию-предикат. Следующий emitter получает только `ok` с тегом `Audit` и все ошибки:
+Проверяйте статус, тег или данные внутри callback. Чтобы обработать только первый подходящий результат, отпишитесь до выполнения дальнейших действий:
 
 ```ts
 import { Result } from '@wambata/resu'
 
-const audit = new Result.Emitters.Emitter({
-	emitOk: (result) => result.tag === 'Audit',
-	emitError: true,
+Result.Emitter.Subscribe((result, off) => {
+	if (result.status !== 'error') return
+
+	off()
+	console.error(result.tag, result.data)
 })
 
-Result.Emitters.Add(audit)
-
-Result.Ok({ tag: 'Audit', data: 'saved' })
-Result.Ok({ tag: 'Ignored', data: 'draft' }) // не отправляется
-Result.Error({ tag: 'Failure', data: 'broken' })
-
-Result.Emitters.Delete(audit)
+Result.Ok({ tag: 'Ready' }) // подписка остаётся активной
+Result.Error({ tag: 'FirstFailure' }) // выводится в журнал; подписка завершается
+Result.Error({ tag: 'LaterFailure' }) // callback уже отписан
 ```
 
-### Ручная отправка и локальное переопределение
+Повторная регистрация той же функции сохраняет одну подписку и передаёт callback новую функцию `off`. Любая ранее возвращённая `off` для этой функции удаляет её текущую подписку, включая более позднюю регистрацию. Разные ссылки на функции создают отдельные подписки.
 
-`emitter.emit(result)` отправляет конкретный результат вручную. Опция `emit` отдельного `Result` принудительно включает или отключает его автоматическую отправку:
+Встроенных опций `once`, `signal` и фильтрации по статусу нет. Фильтрацией и временем жизни подписки управляет потребитель.
+
+### Подавление событий создания
+
+По умолчанию результаты уведомляют слушателей независимо от статуса. `emit: true` работает так же; `emit: false` подавляет уведомление для конкретного результата.
+
+Создание результата внутри слушателя обычно вызывает вложенную синхронную доставку. Используйте `emit: false` для результатов, которые не должны порождать новые события:
 
 ```ts
 import { Result } from '@wambata/resu'
 
-const events = new Result.Emitters.Emitter({ emitError: true })
-
-Result.Emitters.Add(events)
-
-events.emit(Result.Ok({
-	tag: 'Manual',
-	data: 1,
-}))
-
-Result.Ok({
-	data: 'force emission',
-	emit: true,
+const off = Result.Emitter.Subscribe((result) => {
+	const diagnostic = Result.Ok({
+		tag: 'Diagnostic',
+		data: result.status,
+		emit: false,
+	})
+	console.log(diagnostic.data)
 })
 
-Result.Error({
-	data: 'suppress emission',
-	emit: false,
-})
-
-Result.Emitters.Delete(events)
+Result.Error({ tag: 'Failure' }) // выводит 'error'; Diagnostic не доставляется
+off()
 ```
 
-`emitter.on()` возвращает функцию отписки и передаёт ту же функцию вторым аргументом обработчика. Для явного управления также доступны `emitter.off(handler)` и `emitter.offAll()`.
+`emit: false` действует только на это создание. Результаты внутри других функций, вызванных слушателем, требуют собственной настройки отправки. Преобразования и flow-операции также могут создавать новые результаты; подавление не переносится на них автоматически.
+
+### Доставка и ошибки
+
+Каждая доставка использует слушателей, зарегистрированных на момент её начала, в порядке регистрации. Новая подписка получает результаты начиная со следующей доставки. Слушатель, удалённый после начала доставки, всё равно получает текущий результат, если его callback ещё не был вызван. Отписка и повторная регистрация callback не вызывают его повторно в рамках текущей доставки.
+
+Синхронные исключения callback выводятся через `console.error('Result Emitter Subscriber Execution Error:', error)`. В журнал передаётся исходное выброшенное значение; следующие слушатели продолжают работу, а обработка ошибки не создаёт служебный `Result`.
+
+Возвращаемые значения callback игнорируются. Возвращённые Promise не ожидаются, и emitter не обрабатывает их отклонения; асинхронные ошибки обрабатывайте внутри callback.
 
 ## Типы и утилиты
 
@@ -1039,7 +1026,7 @@ TypeScript получает эти декларации через импорт�
 | Безопасные функции | `flow-function-sync`, `flow-function-async` | `FlowFunctionSync`, `FlowFunctionAsync` |
 | Сопоставление | `flow-match-loose`, `flow-match-strict` | `FlowMatchLoose`, `FlowMatchStrict` |
 | Последовательности Runtime | `runtime-gen-sync`, `runtime-gen-async`, `runtime-unwrap-sync`, `runtime-unwrap-async`, `runtime-unwrap-tagged-sync`, `runtime-unwrap-tagged-async` | `RuntimeGenSync`, `RuntimeGenAsync`, `RuntimeUnwrapSync`, `RuntimeUnwrapAsync`, `RuntimeUnwrapTaggedSync`, `RuntimeUnwrapTaggedAsync` |
-| Emitters | `emitter`, `result-emitters-add`, `result-emitters-delete` | `Emitter`, `ResultEmittersAdd`, `ResultEmittersDelete` |
+| События результатов | `emitter` | `Emitter` (общий объект с `subscribe` и `unsubscribe`) |
 | Типы результатов | `result-any`, `result-any-ok`, `result-any-error`, `result-extract`, `result-extract-ok`, `result-extract-error`, `result-exclude`, `result-exclude-ok`, `result-exclude-error`, `flow-checked` | `ResultAny`, `ResultAnyOk`, `ResultAnyError`, `ResultExtract`, `ResultExtractOk`, `ResultExtractError`, `ResultExclude`, `ResultExcludeOk`, `ResultExcludeError`, `FlowChecked` |
 | Встроенные ошибки | `utils/utils-error-runtime`, `utils/utils-error-abort` | `UtilsErrorRuntime`, `UtilsErrorAbort` |
 | Вспомогательные типы | `utils/utils-source`, `utils/utils-non-undefined-source`, `utils/utils-non-undefined`, `utils/utils-non-empty-array` | `UtilsSource`, `UtilsNonUndefinedSource`, `UtilsNonUndefined`, `UtilsNonAmptyArray` |
@@ -1053,7 +1040,7 @@ TypeScript получает эти декларации через импорт�
 - Функция, переданная в sync- или async-flow, не должна возвращать `undefined` или `void`: такие контракты отклоняются типами.
 - Внутри `Runtime.Gen.Sync` используйте sync-варианты `Unwrap`, а внутри `Runtime.Gen.Async` используйте async-варианты.
 - Совместимость с браузерами пока не гарантируется.
-- Для emitters и отмены окружение должно предоставлять `EventTarget`, `CustomEvent`, `AbortSignal` и `AbortController`.
+- Для отмены окружение должно предоставлять `AbortSignal` и `AbortController`.
 
 ## Поддержка и участие
 

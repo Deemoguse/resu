@@ -52,7 +52,7 @@ export namespace FlowTryWith {
 				/**
 				 * Optional recovery branch for thrown errors.
 				 */
-				catch?: () => UtilsNonUndefinedSource<C>
+				catch?: (error: unknown) => UtilsNonUndefinedSource<C>
 			}
 			: never
 

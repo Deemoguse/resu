@@ -59,6 +59,6 @@ export type { ResultAnyOk as AnyOk } from '../../operations/result-any-ok'
 export type { ResultAny as Any } from '../../operations/result-any'
 
 /**
- * Emitter helpers for result construction events.
+ * Subscriptions to synchronous result creation events.
  */
-export * as Emitters from './result-emitters'
+export * as Emitter from './result-emitter'
