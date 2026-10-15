@@ -888,11 +888,14 @@ Callback return values are ignored. Returned promises are not awaited, and their
 
 | Type | Purpose |
 |---|---|
+| `Result.Status`, `Result.Tag`, `Result.Data` | Shared types of result fields |
 | `Result.Any`, `Result.AnyOk`, `Result.AnyError` | Generic boundaries without known tags or data |
 | `Flow.Checked<T>` | The safely executed outcome of `T` |
 | `ResultExtract*` | Keep selected variants from a union |
 | `ResultExclude*` | Remove selected variants from a union |
 | `Utils.Source<T>` | Describe a value or compatible `Result` before normalization |
+
+`Result.Status` is `'ok' | 'error'`, `Result.Tag` is `string | null`, and `Result.Data` is `unknown`. These types are available from the root `Result` namespace; use a concrete payload type for domain results.
 
 ### Broad `Result.Any*` types
 
@@ -1005,20 +1008,19 @@ import { RuntimeGenSync } from '@wambata/resu/runtime-gen-sync'
 import type { ResultExtractOk } from '@wambata/resu/result-extract-ok'
 ```
 
-The `types` entry exports the shared `Result` type and its namespace helpers:
+Field types are available as `Result.Status`, `Result.Tag`, and `Result.Data` through the root import, or as dedicated type-only imports:
 
 ```ts
-import type { Result } from '@wambata/resu/types'
-
-type Status = Result.Status
-type Tag = Result.Tag
+import type { ResultStatus } from '@wambata/resu/result-status'
+import type { ResultTag } from '@wambata/resu/result-tag'
+import type { ResultData } from '@wambata/resu/result-data'
 ```
 
-TypeScript resolves these declarations through imports; adding the package to `compilerOptions.types` is not required.
+The former `@wambata/resu/types` entry has been removed. TypeScript resolves declarations through imports; adding the package to `compilerOptions.types` is not required.
 
 | Group | Public subpaths | Exported names |
 |---|---|---|
-| Shared structural types | `types` | `Result` (type only) |
+| Result field types | `result-status`, `result-tag`, `result-data` | `ResultStatus`, `ResultTag`, `ResultData` (type only) |
 | Creating a `Result` | `result-ok`, `result-error` | `ResultOk`, `ResultError` |
 | Converting a `Result` | `result-ok-from`, `result-error-from`, `result-ok-from-unless-error`, `result-error-from-unless-ok` | `ResultOkFrom`, `ResultErrorFrom`, `ResultOkFromUnlessError`, `ResultErrorFromUnlessOk` |
 | Type guards | `result-is`, `result-is-ok`, `result-is-error` | `ResultIs`, `ResultIsOk`, `ResultIsError` |
@@ -1026,7 +1028,7 @@ TypeScript resolves these declarations through imports; adding the package to `c
 | Safe functions | `flow-function-sync`, `flow-function-async` | `FlowFunctionSync`, `FlowFunctionAsync` |
 | Matching | `flow-match-loose`, `flow-match-strict` | `FlowMatchLoose`, `FlowMatchStrict` |
 | Runtime sequences | `runtime-gen-sync`, `runtime-gen-async`, `runtime-unwrap-sync`, `runtime-unwrap-async`, `runtime-unwrap-tagged-sync`, `runtime-unwrap-tagged-async` | `RuntimeGenSync`, `RuntimeGenAsync`, `RuntimeUnwrapSync`, `RuntimeUnwrapAsync`, `RuntimeUnwrapTaggedSync`, `RuntimeUnwrapTaggedAsync` |
-| Result events | `emitter` | `Emitter` (shared object with `subscribe` and `unsubscribe`) |
+| Result events | `emitter`, `result-emitter-subscribe`, `result-emitter-unsubscribe` | `Emitter` (shared object with `subscribe` and `unsubscribe`), `ResultEmitterSubscribe`, `ResultEmitterUnsubscribe` |
 | Result types | `result-any`, `result-any-ok`, `result-any-error`, `result-extract`, `result-extract-ok`, `result-extract-error`, `result-exclude`, `result-exclude-ok`, `result-exclude-error`, `flow-checked` | `ResultAny`, `ResultAnyOk`, `ResultAnyError`, `ResultExtract`, `ResultExtractOk`, `ResultExtractError`, `ResultExclude`, `ResultExcludeOk`, `ResultExcludeError`, `FlowChecked` |
 | Built-in errors | `utils/utils-error-runtime`, `utils/utils-error-abort` | `UtilsErrorRuntime`, `UtilsErrorAbort` |
 | Helper types | `utils/utils-source`, `utils/utils-non-undefined-source`, `utils/utils-non-undefined`, `utils/utils-non-empty-array` | `UtilsSource`, `UtilsNonUndefinedSource`, `UtilsNonUndefined`, `UtilsNonAmptyArray` |

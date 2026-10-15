@@ -7,6 +7,5 @@ export default createConfig({
 		'*': './src/operations/*.ts',
 		'utils/*': './src/utils/*.ts',
 		'emitter': './src/classes/emitter.ts',
-		'types': './src/types.ts',
 	},
 })

@@ -79,13 +79,17 @@
 			"import": "./dist/result-any-ok.mjs",
 			"require": "./dist/result-any-ok.cjs"
 		},
-		"./result-emitters-add": {
-			"import": "./dist/result-emitters-add.mjs",
-			"require": "./dist/result-emitters-add.cjs"
+		"./result-data": {
+			"import": "./dist/result-data.mjs",
+			"require": "./dist/result-data.cjs"
 		},
-		"./result-emitters-delete": {
-			"import": "./dist/result-emitters-delete.mjs",
-			"require": "./dist/result-emitters-delete.cjs"
+		"./result-emitter-subscribe": {
+			"import": "./dist/result-emitter-subscribe.mjs",
+			"require": "./dist/result-emitter-subscribe.cjs"
+		},
+		"./result-emitter-unsubscribe": {
+			"import": "./dist/result-emitter-unsubscribe.mjs",
+			"require": "./dist/result-emitter-unsubscribe.cjs"
 		},
 		"./result-error": {
 			"import": "./dist/result-error.mjs",
@@ -147,6 +151,14 @@
 			"import": "./dist/result-ok-from-unless-error.mjs",
 			"require": "./dist/result-ok-from-unless-error.cjs"
 		},
+		"./result-status": {
+			"import": "./dist/result-status.mjs",
+			"require": "./dist/result-status.cjs"
+		},
+		"./result-tag": {
+			"import": "./dist/result-tag.mjs",
+			"require": "./dist/result-tag.cjs"
+		},
 		"./runtime-gen-async": {
 			"import": "./dist/runtime-gen-async.mjs",
 			"require": "./dist/runtime-gen-async.cjs"
@@ -170,10 +182,6 @@
 		"./runtime-unwrap-tagged-sync": {
 			"import": "./dist/runtime-unwrap-tagged-sync.mjs",
 			"require": "./dist/runtime-unwrap-tagged-sync.cjs"
-		},
-		"./types": {
-			"import": "./dist/types.mjs",
-			"require": "./dist/types.cjs"
 		},
 		"./utils/utils-error-abort": {
 			"import": "./dist/utils/utils-error-abort.mjs",
@@ -205,11 +213,9 @@
 		"dist/**/*.cjs",
 		"dist/**/*.d.cts",
 		"dist/**/*.map.cjs",
-
 		"dist/**/*.mjs",
 		"dist/**/*.d.mts",
 		"dist/**/*.map.mjs",
-
 		"./LICENSE.md",
 		"./test/types/_entry.d.ts"
 	],

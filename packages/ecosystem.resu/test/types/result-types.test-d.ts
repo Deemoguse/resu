@@ -6,7 +6,7 @@ import type { ResultExcludeError } from '../../src/operations/result-exclude-err
 import type { ResultExtract } from '../../src/operations/result-extract'
 import type { ResultExtractOk } from '../../src/operations/result-extract-ok'
 import type { ResultExtractError } from '../../src/operations/result-extract-error'
-import type { Result as ResultClass } from '../../src/types'
+import type { Result as ResultClass } from '../../src/classes/result'
 
 type Ready = Result.Ok<'Ready', number>
 type Other = Result.Ok<null, boolean>

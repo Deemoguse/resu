@@ -59,6 +59,21 @@ export type { ResultAnyOk as AnyOk } from '../../operations/result-any-ok'
 export type { ResultAny as Any } from '../../operations/result-any'
 
 /**
+ * Status shared by successful and failed results.
+ */
+export type { ResultStatus as Status } from '../../operations/result-status'
+
+/**
+ * Result discriminator; `null` represents an untagged result.
+ */
+export type { ResultTag as Tag } from '../../operations/result-tag'
+
+/**
+ * Unconstrained payload type for results without a known data shape.
+ */
+export type { ResultData as Data } from '../../operations/result-data'
+
+/**
  * Subscriptions to synchronous result creation events.
  */
 export * as Emitter from './result-emitter'
