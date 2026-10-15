@@ -10,11 +10,11 @@ import { FlowFunctionWith } from '../factories/flow-function-create-with'
  * Value returned by the wrapped function before result wrapping.
  */
 export type FlowFunctionAsync<
-	A extends unknown[],
 	R,
+	A extends unknown[] = [],
 > =
-	[A, R] extends [unknown, unknown]
-		? FlowFunctionWith.Return<'async', A, R>
+	[R, A] extends [unknown, unknown]
+		? FlowFunctionWith.Return<'async', R, A>
 		: never
 
 /**
