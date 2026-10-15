@@ -888,11 +888,14 @@ off()
 
 | Тип | Назначение |
 |---|---|
+| `Result.Status`, `Result.Tag`, `Result.Data` | Общие типы полей результата |
 | `Result.Any`, `Result.AnyOk`, `Result.AnyError` | Универсальные границы без известных тегов и данных |
 | `Flow.Checked<T>` | Итог безопасного выполнения значения `T` |
 | `ResultExtract*` | Оставить выбранные варианты union |
 | `ResultExclude*` | Исключить выбранные варианты union |
 | `Utils.Source<T>` | Описать значение или совместимый `Result` до нормализации |
+
+`Result.Status` — это `'ok' | 'error'`, `Result.Tag` — `string | null`, а `Result.Data` — `unknown`. Эти типы доступны через корневое пространство имён `Result`; для доменных результатов используйте конкретный тип данных.
 
 ### Широкие типы `Result.Any*`
 
@@ -1005,20 +1008,19 @@ import { RuntimeGenSync } from '@wambata/resu/runtime-gen-sync'
 import type { ResultExtractOk } from '@wambata/resu/result-extract-ok'
 ```
 
-Путь `types` экспортирует общий тип `Result` и вспомогательные типы его пространства имён:
+Типы полей доступны как `Result.Status`, `Result.Tag` и `Result.Data` через корневой импорт либо через отдельные импорты типов:
 
 ```ts
-import type { Result } from '@wambata/resu/types'
-
-type Status = Result.Status
-type Tag = Result.Tag
+import type { ResultStatus } from '@wambata/resu/result-status'
+import type { ResultTag } from '@wambata/resu/result-tag'
+import type { ResultData } from '@wambata/resu/result-data'
 ```
 
-TypeScript получает эти декларации через импорты; добавлять пакет в `compilerOptions.types` не требуется.
+Прежний путь `@wambata/resu/types` удалён. TypeScript получает декларации через импорты; добавлять пакет в `compilerOptions.types` не требуется.
 
 | Группа | Публичные subpaths | Экспортируемые имена |
 |---|---|---|
-| Общие структурные типы | `types` | `Result` (только тип) |
+| Типы полей результата | `result-status`, `result-tag`, `result-data` | `ResultStatus`, `ResultTag`, `ResultData` (только типы) |
 | Создание `Result` | `result-ok`, `result-error` | `ResultOk`, `ResultError` |
 | Преобразование `Result` | `result-ok-from`, `result-error-from`, `result-ok-from-unless-error`, `result-error-from-unless-ok` | `ResultOkFrom`, `ResultErrorFrom`, `ResultOkFromUnlessError`, `ResultErrorFromUnlessOk` |
 | Проверка типов | `result-is`, `result-is-ok`, `result-is-error` | `ResultIs`, `ResultIsOk`, `ResultIsError` |
@@ -1026,7 +1028,7 @@ TypeScript получает эти декларации через импорт�
 | Безопасные функции | `flow-function-sync`, `flow-function-async` | `FlowFunctionSync`, `FlowFunctionAsync` |
 | Сопоставление | `flow-match-loose`, `flow-match-strict` | `FlowMatchLoose`, `FlowMatchStrict` |
 | Последовательности Runtime | `runtime-gen-sync`, `runtime-gen-async`, `runtime-unwrap-sync`, `runtime-unwrap-async`, `runtime-unwrap-tagged-sync`, `runtime-unwrap-tagged-async` | `RuntimeGenSync`, `RuntimeGenAsync`, `RuntimeUnwrapSync`, `RuntimeUnwrapAsync`, `RuntimeUnwrapTaggedSync`, `RuntimeUnwrapTaggedAsync` |
-| События результатов | `emitter` | `Emitter` (общий объект с `subscribe` и `unsubscribe`) |
+| События результатов | `emitter`, `result-emitter-subscribe`, `result-emitter-unsubscribe` | `Emitter` (общий объект с `subscribe` и `unsubscribe`), `ResultEmitterSubscribe`, `ResultEmitterUnsubscribe` |
 | Типы результатов | `result-any`, `result-any-ok`, `result-any-error`, `result-extract`, `result-extract-ok`, `result-extract-error`, `result-exclude`, `result-exclude-ok`, `result-exclude-error`, `flow-checked` | `ResultAny`, `ResultAnyOk`, `ResultAnyError`, `ResultExtract`, `ResultExtractOk`, `ResultExtractError`, `ResultExclude`, `ResultExcludeOk`, `ResultExcludeError`, `FlowChecked` |
 | Встроенные ошибки | `utils/utils-error-runtime`, `utils/utils-error-abort` | `UtilsErrorRuntime`, `UtilsErrorAbort` |
 | Вспомогательные типы | `utils/utils-source`, `utils/utils-non-undefined-source`, `utils/utils-non-undefined`, `utils/utils-non-empty-array` | `UtilsSource`, `UtilsNonUndefinedSource`, `UtilsNonUndefined`, `UtilsNonAmptyArray` |
