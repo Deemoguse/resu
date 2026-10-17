@@ -228,8 +228,7 @@
 		"test:typecheck": "tsc --project ./test/tsconfig.json",
 		"test:coverage": "npm run test:typecheck && npm run test:types && vitest run --coverage",
 		"test:runtime": "vitest run",
-		"test:types": "tsd --typings ./test/types/_entry.d.ts --files ./test/types/**/*.test-d.ts",
-		"release": "echo ok"
+		"test:types": "tsd --typings ./test/types/_entry.d.ts --files ./test/types/**/*.test-d.ts"
 	},
 	"devDependencies": {
 		"@internal/configs": "1.0.0",
@@ -246,5 +245,8 @@
 			"composite": false,
 			"isolatedDeclarations": false
 		}
+	},
+	"dependencies": {
+		"@changesets/cli": "3.0.3"
 	}
 }
