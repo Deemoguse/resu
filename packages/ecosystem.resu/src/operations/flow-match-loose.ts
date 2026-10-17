@@ -23,6 +23,8 @@ export type FlowMatchLoose<
  *
  * An unmatched result is normalized into a new result with the same status,
  * tag, and data when the chain is evaluated.
+ * Register synchronous handlers with `case()` and evaluate with `result()`.
+ * Registration errors and handler exceptions become `RuntimeError`.
  *
  * @param result
  * Result value to match.
@@ -33,14 +35,14 @@ export type FlowMatchLoose<
  * @example
  * ```ts
  * const result = FlowMatchLoose(ResultOk({ data: 2 }))
- * 	.ok([null], (current) => current.data * 2)
+ * 	.case('ok', null, (current) => current.data * 2)
  * 	.result()
  * ```
  *
  * @example
  * ```ts
  * const result = FlowMatchLoose(ResultError({ tag: 'Failure', data: 'broken' }))
- * 	.error(['Failure'], (current) => current.data)
+ * 	.case('error', 'Failure', (current) => current.data)
  * 	.result()
  * ```
  */

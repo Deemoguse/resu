@@ -29,9 +29,9 @@ export declare namespace ResultWith {
 				 */
 				data?: UtilsNonUndefined<D>
 				/**
-				 * Optional override for automatic result emission.
+				 * Controls notification of result creation subscribers.
 				 *
-				 * `true` forces emission and `false` suppresses it.
+				 * `false` suppresses notification; `true` or omission notifies subscribers.
 				 */
 				emit?: boolean
 			}

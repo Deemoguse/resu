@@ -1,65 +1,44 @@
 import { expectError, expectType } from 'tsd'
-import { FlowFunctionSync } from '../../src/operations/flow-function-sync'
-import { FlowFunctionAsync } from '../../src/operations/flow-function-async'
-import { ResultErrorFrom } from '../../src/operations/result-error-from'
-import { ResultOkFrom } from '../../src/operations/result-ok-from'
-import type { FlowTrySync } from '../../src/operations/flow-try-sync'
-import type { FlowTryAsync } from '../../src/operations/flow-try-async'
+import { Flow, Result } from '../../src/namespaces/index'
 
-type TextInput = string
-type CountInput = number
-type SuccessValue = number
-type FailureText = string
-
-type SyncTextCounter = (input: TextInput, count: CountInput) => FlowTrySync<SuccessValue>
-type AsyncTextReader = (input: TextInput) => FlowTryAsync<SuccessValue>
-type SyncSuccessFunction = () => FlowTrySync<SuccessValue>
-type AsyncSuccessFunction = () => FlowTryAsync<SuccessValue>
-type SyncFailureFunction = () => FlowTrySync<ResultErrorFrom<FailureText>>
-type AsyncFailureFunction = () => FlowTryAsync<ResultErrorFrom<FailureText>>
-
-// Basic inference
+// Arguments: required, optional, rest, and independent sync/async signatures.
 {
-	const syncWrapped = FlowFunctionSync((input: TextInput, count: CountInput): SuccessValue => input.length + count)
-	const asyncWrapped = FlowFunctionAsync(async (input: TextInput): Promise<SuccessValue> => input.length)
-	const asyncFromSyncWrapped = FlowFunctionAsync((input: TextInput): SuccessValue => input.length)
+	const sync = Flow.Function.Sync((text: string, count: number): number => text.length + count)
+	const async = Flow.Function.Async(async (text: string): Promise<number> => text.length)
+	const fromSync = Flow.Function.Async((text: string): number => text.length)
+	const optional = Flow.Function.Sync((value: number, suffix?: string): string => value + (suffix ?? ''))
+	const rest = Flow.Function.Async((...values: number[]): number => values.length)
 
-	expectType<SyncTextCounter>(syncWrapped)
-	expectType<AsyncTextReader>(asyncWrapped)
-	expectType<AsyncTextReader>(asyncFromSyncWrapped)
+	expectType<(text: string, count: number) => Flow.Try.Sync<number>>(sync)
+	expectType<(text: string) => Flow.Try.Async<number>>(async)
+	expectType<(text: string) => Flow.Try.Async<number>>(fromSync)
+	expectType<(value: number, suffix?: string) => Flow.Try.Sync<string>>(optional)
+	expectType<(...values: number[]) => Flow.Try.Async<number>>(rest)
+	expectError(sync('text'))
+	expectError(sync(1, 2))
+	expectError(async())
+	expectError(optional(1, false))
+	expectError(rest('text'))
 }
 
-// Raw values are wrapped as ok results
+// Results: normalization preserves error branches and avoids nested containers.
 {
-	const syncRaw = FlowFunctionSync((): SuccessValue => 32)
-	const asyncRaw = FlowFunctionAsync(async (): Promise<SuccessValue> => 32)
+	expectType<() => Flow.Try.Sync<number>>(Flow.Function.Sync(() => Result.OkFrom(32 as number)))
+	expectType<() => Flow.Try.Async<number>>(Flow.Function.Async(async () => Result.OkFrom(32 as number)))
+	expectType<() => Flow.Try.Sync<Result.ErrorFrom<string>>>(Flow.Function.Sync(() => Result.ErrorFrom('broken' as string)))
+	expectType<() => Flow.Try.Async<Result.ErrorFrom<string>>>(Flow.Function.Async(async () => Result.ErrorFrom('broken' as string)))
 
-	expectType<SyncSuccessFunction>(syncRaw)
-	expectType<AsyncSuccessFunction>(asyncRaw)
+	expectType<() => Flow.Try.Sync<number>>(Flow.Function.Sync<Result.OkFrom<number>, []>(() => 32))
+	expectType<() => Flow.Try.Async<number>>(Flow.Function.Async<Result.OkFrom<number>, []>(async () => 32))
+	expectError(Flow.Function.Sync<Result.ErrorFrom<string>, []>(() => 'broken'))
+	expectError(Flow.Function.Async<Result.ErrorFrom<string>, []>(async () => 'broken'))
 }
 
-// Existing ResultOk values stay flat
+// Invalid sources: sync operations reject promises; neither mode accepts absence.
 {
-	const syncOk = FlowFunctionSync(() => ResultOkFrom(32 as SuccessValue))
-	const asyncOk = FlowFunctionAsync(async () => ResultOkFrom(32 as SuccessValue))
-
-	expectType<SyncSuccessFunction>(syncOk)
-	expectType<AsyncSuccessFunction>(asyncOk)
-}
-
-// Existing ResultError values stay on the error branch
-{
-	const syncError = FlowFunctionSync(() => ResultErrorFrom('str' as FailureText))
-	const asyncError = FlowFunctionAsync(async () => ResultErrorFrom('str' as FailureText))
-
-	expectType<SyncFailureFunction>(syncError)
-	expectType<AsyncFailureFunction>(asyncError)
-	expectError(FlowFunctionSync<ResultErrorFrom<FailureText>, []>(() => 'str' as FailureText))
-	expectError(FlowFunctionAsync<ResultErrorFrom<FailureText>, []>(async () => 'str' as FailureText))
-}
-
-// Undefined returns are rejected
-{
-	expectError(FlowFunctionSync(() => undefined))
-	expectError(FlowFunctionAsync(async () => undefined))
+	expectError(Flow.Function.Sync(() => undefined))
+	expectError(Flow.Function.Sync(() => {}))
+	expectError(Flow.Function.Sync(async () => 1))
+	expectError(Flow.Function.Async(async () => undefined))
+	expectError(Flow.Function.Async(() => {}))
 }

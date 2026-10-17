@@ -5,12 +5,10 @@
 	"tasks": {
 		"release": {
 			"dependsOn": ["lint-fix", "test", "build"],
-			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": ["dist/*"]
 		},
 		"build": {
 			"dependsOn": ["^build", "test"],
-			"inputs": ["$TURBO_DEFAULT$", ".env*"],
 			"outputs": ["dist/*"]
 		},
 		"dev": {
@@ -21,12 +19,10 @@
 			"cache": false
 		},
 		"lint": {
-			"cache": true,
-			"inputs": ["$TURBO_DEFAULT$", ".env*"]
+			"cache": true
 		},
 		"lint-fix": {
-			"cache": true,
-			"inputs": ["$TURBO_DEFAULT$", ".env*"]
+			"cache": true
 		}
 	}
 }

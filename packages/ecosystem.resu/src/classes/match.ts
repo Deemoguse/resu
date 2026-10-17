@@ -1,20 +1,41 @@
-import { UtilsErrorRuntime } from '../utils/utils-error-runtime'
 import { FlowTrySync } from '../operations/flow-try-sync'
+import { UtilsErrorRuntime } from '../utils/utils-error-runtime'
 import { ResultOkFromUnlessError } from '../operations/result-ok-from-unless-error'
 import type { Result } from './result'
 import type { ResultAny } from '../operations/result-any'
 import type { ResultAnyError } from '../operations/result-any-error'
 import type { ResultExclude } from '../operations/result-exclude'
 import type { ResultExtract } from '../operations/result-extract'
-import type { UtilsNonAmptyArray } from '../utils/utils-non-empty-array'
 import type { UtilsNonUndefinedSource } from '../utils/utils-non-undefined-source'
+import type { UtilsNonAmptyArray } from '../utils/utils-non-empty-array'
+
+type MATCH_DEFAULT_HANDLER = typeof MATCH_DEFAULT_HANDLER
+const MATCH_DEFAULT_HANDLER = Symbol.for('__RESU_MATCH_DEFAULT_HANDLER__')
 
 /**
- * Type helpers used by flow matching chains.
+ * Shared matching-chain types.
  */
 export namespace Match {
 	/**
-	 * Constructor shape that preserves a concrete match chain subtype.
+	 * Concrete chain kind and its result state.
+	 */
+	export interface Kind {
+		/**
+		 * Accumulated handler outcomes.
+		 */
+		R: unknown
+		/**
+		 * Unmatched input variants.
+		 */
+		L: unknown
+		/**
+		 * Concrete chain instance.
+		 */
+		type: unknown
+	}
+
+	/**
+	 * Constructor for a concrete chain kind.
 	 *
 	 * @template K
 	 * Match kind that provides the concrete chain type.
@@ -25,198 +46,149 @@ export namespace Match {
 			: never
 
 	/**
-	 * Structural kind used to re-create typed match chain instances.
+	 * Status selectors for cases and the general fallback.
 	 */
-	export interface Kind {
-		/**
-		 * Accumulated handled result type.
-		 */
-		R: unknown
-		/**
-		 * Remaining unhandled result type.
-		 */
-		L: unknown
-		/**
-		 * Concrete chain instance type.
-		 */
-		type: unknown
-	}
+	export type CaseStatus = 'any' | Result.Status
 
 	/**
-	 * Handler invoked when a result branch matches.
+	 * Input variants covered by a case.
 	 *
 	 * @template R
-	 * Result type received by the handler.
+	 * Result union to select from.
+	 *
+	 * @template S
+	 * Status selector to apply.
+	 *
+	 * @template T
+	 * Optional tag to select within that status.
+	 */
+	export type CaseExtractResult<
+		R extends ResultAny,
+		S extends CaseStatus,
+		T extends Result.Tag = never,
+	> =
+		[R, S, T] extends [unknown, unknown, unknown]
+			? S extends Result.Status
+				? ResultExtract<R, S, T>
+				: ResultExtract<R, Result.Status, T>
+			: never
+
+	/**
+	 * Input variants left unmatched after a case.
+	 *
+	 * @template R
+	 * Result union to filter.
+	 *
+	 * @template S
+	 * Status selector to remove.
+	 *
+	 * @template T
+	 * Optional tag to remove within that status.
+	 */
+	export type CaseExcludeResult<
+		R extends ResultAny,
+		S extends CaseStatus,
+		T extends Result.Tag = never,
+	> =
+		[R, S, T] extends [unknown, unknown, unknown]
+			? S extends Result.Status
+				? ResultExclude<R, S, T>
+				: ResultExclude<R, Result.Status, T>
+			: never
+
+	/**
+	 * Tags available among unmatched variants of the selected status.
+	 *
+	 * @template L
+	 * Remaining result union.
+	 *
+	 * @template S
+	 * Status selector to inspect.
+	 */
+	export type CaseResultTags<
+		L extends ResultAny,
+		S extends CaseStatus,
+	> =
+		[L, S] extends [unknown, unknown]
+			? CaseExtractResult<L, S>['tag']
+			: never
+
+	/**
+	 * Synchronous handler for the input variants covered by a case.
+	 *
+	 * @template R
+	 * Result union supplied to the handler.
 	 *
 	 * @template V
 	 * Value returned by the handler.
-	 */
-	export type Handler<R extends ResultAny = ResultAny, V = unknown> =
-		[R, V] extends [unknown, unknown]
-			? (result: R) => UtilsNonUndefinedSource<V>
-			: never
-
-	/**
-	 * Handler registry carried by immutable match chains.
-	 */
-	export type Store = {
-		/**
-		 * Deferred usage error produced by duplicate handlers.
-		 */
-		usageError?: ResultAnyError
-		/**
-		 * Tag handlers for ok results.
-		 */
-		ok: Map<Result.Tag, Handler>
-		/**
-		 * Tag handlers for error results.
-		 */
-		error: Map<Result.Tag, Handler>
-		/**
-		 * Status-wide ok handler.
-		 */
-		okAny?: Handler
-		/**
-		 * Status-wide error handler.
-		 */
-		errorAny?: Handler
-		/**
-		 * Fallback handler for any result status.
-		 */
-		any?: Handler
-	}
-
-	/**
-	 * Adds handlers for one or more tags under a concrete result status.
-	 *
-	 * @template K
-	 * Concrete match chain kind.
 	 *
 	 * @template S
-	 * Result status handled by this matcher.
-	 *
-	 * @template R
-	 * Accumulated handled result type.
-	 *
-	 * @template L
-	 * Remaining unhandled result type.
-	 */
-	export type WithTag<
-		K extends Kind,
-		S extends Result.Status,
-		R extends ResultAny,
-		L extends ResultAny,
-	> =
-		[K, S, R, L] extends [unknown, unknown, unknown, unknown]
-			? [ResultExtract<L, S>] extends [never]
-				? never
-				: <
-					T extends ResultExtract<L, S>['tag'],
-					V,
-				>(
-					tags: UtilsNonAmptyArray<T>,
-					handler: Handler<ResultExtract<L, S, T>, V>,
-				) => (
-					Match.Apply<K, Match.CalcResult<R, V>, Match.CalcLeft<S, L, T>>
-				)
-			: never
-
-	/**
-	 * Adds a status-wide or fallback handler to a match chain.
-	 *
-	 * @template K
-	 * Concrete match chain kind.
-	 *
-	 * @template S
-	 * Status selector handled by this matcher.
-	 *
-	 * @template R
-	 * Accumulated handled result type.
-	 *
-	 * @template L
-	 * Remaining unhandled result type.
-	 */
-	export type WithStatus<
-		K extends Kind,
-		S extends Result.Status | 'any',
-		R extends ResultAny,
-		L extends ResultAny,
-	> =
-		[K, S, R, L] extends [unknown, unknown, unknown, unknown]
-			? S extends Result.Status
-				? [ResultExtract<L, S>] extends [never]
-					? never
-					: <V>(handler: Handler<ResultExtract<L, S>, V>) => Match.Apply<K, Match.CalcResult<R, V>, ResultExclude<L, S>>
-				: [L] extends [never]
-					? never
-					: <V>(handler: Handler<L, V>) => Match.Apply<K, Match.CalcResult<R, V>, never>
-			: never
-
-	/**
-	 * Extends a match result union with a handler output.
-	 *
-	 * @template R
-	 * Existing handled result union.
-	 *
-	 * @template V
-	 * Handler output to wrap into a result when needed.
-	 */
-	export type CalcResult<
-		R extends ResultAny,
-		V,
-	> =
-		[R, V] extends [unknown, unknown]
-			? R | ResultOkFromUnlessError<V>
-			: never
-
-	/**
-	 * Removes handled variants from the remaining result union.
-	 *
-	 * @template S
-	 * Status to remove.
-	 *
-	 * @template L
-	 * Remaining result union before the handler is added.
+	 * Status selector applied to the result union.
 	 *
 	 * @template T
-	 * Optional tag to remove within the status.
+	 * Optional tag selector.
 	 */
-	export type CalcLeft<
-		S extends Result.Status,
-		L extends ResultAny,
-		T extends Result.Tag = never,
+	export type CaseHandler<
+		R extends ResultAny = ResultAny,
+		V = unknown,
+		S extends CaseStatus = CaseStatus,
+		T extends Result.Tag = Result.Tag,
 	> =
-		[S, L, T] extends [unknown, unknown, unknown]
-			? ResultExclude<L, S, T>
+		[R, V, S, T] extends [unknown, unknown, unknown, unknown]
+			? [R] extends [never]
+				? never
+				: (result: CaseExtractResult<R, S, T>) => UtilsNonUndefinedSource<V>
 			: never
 
 	/**
-	 * Applies accumulated result and remaining types to a concrete chain kind.
+	 * Chain state after a case, with accumulated outcomes and unmatched variants.
 	 *
 	 * @template K
-	 * Concrete match chain kind.
-	 *
-	 * @template R
-	 * Accumulated handled result type.
+	 * Match kind used to reconstruct the concrete chain type.
 	 *
 	 * @template L
-	 * Remaining unhandled result type.
+	 * Remaining result union before this case.
+	 *
+	 * @template R
+	 * Result union already produced by earlier handlers.
+	 *
+	 * @template V
+	 * Value returned by this handler.
+	 *
+	 * @template S
+	 * Status selector handled by this case.
+	 *
+	 * @template T
+	 * Optional tag selector handled by this case.
 	 */
-	export type Apply<
+	export type CaseResult<
 		K extends Kind,
-		R extends ResultAny,
 		L extends ResultAny,
+		R extends ResultAny,
+		V,
+		S extends CaseStatus,
+		T extends Result.Tag = never,
 	> =
-		[K, R, L] extends [unknown, unknown, unknown]
-			? (K & { R: R, L: L })['type']
+		[K, L, R, V, S, T] extends [unknown, unknown, unknown, unknown, unknown, unknown]
+			? (K & {
+				R: R | ResultOkFromUnlessError<V>
+				L: CaseExcludeResult<L, S, T> })['type']
 			: never
+
+	/** Registered cases and deferred usage error. */
+	export interface StoreMap extends Map<string, unknown> {
+		has(key: 'runtimeError' | CaseStatus): boolean
+
+		get(key: 'runtimeError'): undefined | ResultAnyError
+		set(key: 'runtimeError', value: undefined | ResultAnyError): this
+
+		get(key: CaseStatus): undefined | Map<MATCH_DEFAULT_HANDLER | Result.Tag, CaseHandler>
+		set(key: CaseStatus, value: Map<MATCH_DEFAULT_HANDLER | Result.Tag, CaseHandler>): this
+	}
 }
 
 /**
- * Base class for immutable result matching chains.
- *
- * Concrete match helpers add handlers for result statuses and tags, then call
- * `result()` to evaluate the chain into a flow result.
+ * Shared base for immutable loose and strict matching chains.
  *
  * @template R
  * Accumulated result type produced by configured handlers.
@@ -230,14 +202,14 @@ export namespace Match {
  * @example
  * ```ts
  * const result = FlowMatchLoose(ResultOk({ tag: 'Ready', data: 1 }))
- * 	.ok(['Ready'], (current) => current.data + 1)
+ * 	.case('ok', ['Ready'], (current) => current.data + 1)
  * 	.result()
  * ```
  *
  * @example
  * ```ts
  * const result = FlowMatchStrict(ResultError({ tag: 'Failure', data: 'broken' }))
- * 	.error(['Failure'], (current) => current.data)
+ * 	.case('error', ['Failure'], (current) => current.data)
  * 	.result()
  * ```
  */
@@ -247,22 +219,22 @@ export abstract class Match<
 	K extends Match.Kind = Match.Kind,
 > {
 	/**
-	 * Result being matched by the chain.
+	 * Original input shared by derived chains.
 	 */
 	protected readonly inputResult: L
 
 	/**
-	 * Handler store accumulated by the chain.
+	 * Registered cases and deferred usage error.
 	 */
-	protected readonly store: Match.Store
+	protected readonly store: Match.StoreMap
 
 	/**
-	 * Constructor used to preserve the concrete chain subtype.
+	 * Constructor for the concrete chain kind.
 	 */
 	protected readonly target: Match.KindTarget<K>
 
 	/**
-	 * Creates a match chain over a result.
+	 * Initial state for a concrete matching mode.
 	 *
 	 * @param target
 	 * Concrete match constructor used for chained calls.
@@ -270,7 +242,7 @@ export abstract class Match<
 	 * @param result
 	 * Result value to match.
 	 *
-	 * @param store
+	 * @param baseStore
 	 * Optional existing handler store for chain cloning.
 	 *
 	 * @example
@@ -286,118 +258,141 @@ export abstract class Match<
 	constructor(
 		target: Match.KindTarget<K>,
 		result: L,
-		store?: Match.Store,
+		baseStore?: Match.StoreMap,
 	) {
 		this.target = target
-		this.store = this._createStore(store)
+		this.store = baseStore || this._createStore()
 		this.inputResult = result
 	}
 
 	/**
-	 * Evaluates the configured match chain.
+	 * Tag-specific case for `ok` or `error`.
+	 * Duplicate registrations produce `RuntimeError` at evaluation.
+	 *
+	 * @param status
+	 * Concrete result status to handle: `ok` or `error`.
+	 *
+	 * @param tag
+	 * One tag or a non-empty list of tags; use `null` for an untagged result.
+	 *
+	 * @param handler
+	 * Synchronous callback evaluated by `result()`. Plain values become `ok`;
+	 * explicit results preserve their status, tag, and data.
 	 *
 	 * @returns
-	 * Flow result produced by a matching handler, or by the concrete chain mode.
-	 *
-	 * @example
-	 * ```ts
-	 * const result = FlowMatchLoose(ResultOk({ data: 1 })).result()
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * const result = FlowMatchStrict(ResultError({ tag: 'Failure' })).result()
-	 * ```
+	 * New chain; the current chain and sibling chains remain unchanged.
 	 */
-	public abstract result(): FlowTrySync<R | L>
+	public case<
+		S extends Result.Status,
+		T extends Match.CaseResultTags<L, S>,
+		V = never,
+	>(
+		status: S,
+		tag: T | UtilsNonAmptyArray<T>,
+		handler: Match.CaseHandler<L, V, S, T>
+	): (
+		Match.CaseResult<K, L, R, V, S, T>
+	)
 
 	/**
-	 * Adds a handler for one or more ok tags.
+	 * Status-wide case or general `any` fallback.
+	 * Duplicate registrations produce `RuntimeError` at evaluation.
 	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchLoose(ResultOk({ tag: 'Ready', data: 1 }))
-	 * 	.ok(['Ready'], (result) => result.data)
-	 * ```
+	 * @param status
+	 * Status to handle, or `any` for both result statuses.
 	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchStrict(ResultOk({ data: 1 }))
-	 * 	.ok([null], (result) => result.data + 1)
-	 * ```
+	 * @param handler
+	 * Synchronous callback invoked with the input result when this case is
+	 * selected. Exceptions become `RuntimeError`.
+	 *
+	 * @returns
+	 * New chain; handlers are not evaluated during registration.
 	 */
-	public readonly ok: Match.WithTag<K, 'ok', R, L> = this._withTag('ok')
+	public case<
+		S extends Match.CaseStatus,
+		V = never,
+	>(
+		status: S,
+		handler: Match.CaseHandler<L, V, S>
+	): (
+		Match.CaseResult<K, L, R, V, S>
+	)
 
 	/**
-	 * Adds a handler for one or more error tags.
+	 * Shared case registration with deferred usage errors.
 	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchLoose(ResultError({ tag: 'Failure', data: 'broken' }))
-	 * 	.error(['Failure'], (result) => result.data)
-	 * ```
+	 * @param status
+	 * Result status to handle, or `any` to handle either status.
 	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchStrict(ResultError({ data: new Error('boom') }))
-	 * 	.error([null], (result) => result.data)
-	 * ```
+	 * @param tagOrHandler
+	 * Tag selector, or a synchronous callback for all remaining variants under
+	 * the selected status.
+	 *
+	 * @param optionalHandler
+	 * Callback required when a tag selector is supplied.
+	 *
+	 * @returns
+	 * New chain containing the case or a deferred registration error.
 	 */
-	public readonly error: Match.WithTag<K, 'error', R, L> = this._withTag('error')
+	public case<
+		S extends Match.CaseStatus,
+		T extends Match.CaseResultTags<L, S>,
+		V = never,
+	>(
+		status: Match.CaseStatus,
+		tagOrHandler: T | UtilsNonAmptyArray<T> | Match.CaseHandler<L, V, S>,
+		optionalHandler?: Match.CaseHandler<L, V, S, T>,
+	): (
+		Match.CaseResult<K, L, R, V, S>
+	) {
+		const store = this._createStore(this.store)
+		const storeContainError = store.has('runtimeError')
+		if (storeContainError) return new this.target(this.inputResult, store)
+
+		const storeRecord = store.get(status)
+		if (!storeRecord) {
+			store.set('runtimeError', UtilsErrorRuntime('Invalid status. The following statuses are allowed: "any", "ok", or "error".'))
+		}
+		else {
+			const tags = typeof tagOrHandler === 'function' ? [MATCH_DEFAULT_HANDLER] as const : Array.isArray(tagOrHandler) ? tagOrHandler : [tagOrHandler]
+			const handler = typeof tagOrHandler === 'function' ? tagOrHandler : optionalHandler as Match.CaseHandler<L, V, S, T>
+
+			for (const tag of tags) {
+				const alreadyDefined = storeRecord.has(tag)
+				if (alreadyDefined) store.set('runtimeError', UtilsErrorRuntime(`A handler is already defined for the status "${status}" ${tag === MATCH_DEFAULT_HANDLER ? '' : tag || 'null'}.`))
+				else storeRecord.set(tag, handler as unknown as Match.CaseHandler)
+			}
+		}
+
+		return new this.target(this.inputResult, store)
+	}
 
 	/**
-	 * Adds a handler for any ok result.
+	 * Isolated store for a derived chain.
 	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchLoose(ResultOk({ data: 1 }))
-	 * 	.okAny((result) => result.data)
-	 * ```
+	 * @param base
+	 * Optional store to copy.
 	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchStrict(ResultOk({ tag: 'Ready', data: 1 }))
-	 * 	.okAny((result) => result.tag)
-	 * ```
+	 * @returns
+	 * New mutable store for the next chain instance.
 	 */
-	public readonly okAny: Match.WithStatus<K, 'ok', R, L> = this._withStatus('ok')
+	private _createStore(base?: Match.StoreMap): Match.StoreMap {
+		const clonedStore = new Map() as Match.StoreMap
+
+		for (const status of ['any', 'ok', 'error'] as const) {
+			clonedStore.set(status, new Map(base?.get(status)))
+		}
+
+		const runtimeError = base?.get('runtimeError')
+		if (runtimeError) {
+			clonedStore.set('runtimeError', runtimeError)
+		}
+
+		return clonedStore
+	}
 
 	/**
-	 * Adds a handler for any error result.
-	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchLoose(ResultError({ data: 'broken' }))
-	 * 	.errorAny((result) => result.data)
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchStrict(ResultError({ tag: 'Failure', data: 1 }))
-	 * 	.errorAny((result) => result.tag)
-	 * ```
-	 */
-	public readonly errorAny: Match.WithStatus<K, 'error', R, L> = this._withStatus('error')
-
-	/**
-	 * Adds a fallback handler for any remaining result.
-	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchLoose(ResultOk({ data: 1 }))
-	 * 	.any((result) => result.status)
-	 * ```
-	 *
-	 * @example
-	 * ```ts
-	 * FlowMatchStrict(ResultError({ tag: 'Failure' }))
-	 * 	.any((result) => result.tag)
-	 * ```
-	 */
-	public readonly any: Match.WithStatus<K, 'any', R, L> = this._withStatus('any')
-
-	/**
-	 * Resolves the chain through the concrete match mode.
+	 * Shared evaluation with mode-specific unmatched-input handling.
 	 *
 	 * @template R1
 	 * Result type returned by the resolver callback.
@@ -409,88 +404,19 @@ export abstract class Match<
 	 * Flow result returned by the concrete match mode.
 	 */
 	protected resolveResult<R1 extends ResultAny>(cb: (missmatch: boolean, result: ResultAny) => R1): FlowTrySync<R1> {
-		const result = FlowTrySync(() => {
-			if (this.store.usageError) return this.store.usageError
+		const result = FlowTrySync((): ResultAny => {
+			const usageError = this.store.get('runtimeError')
+			if (usageError) return usageError
 
 			const { status, tag } = this.inputResult
-			const handler = this.store[status].get(tag) || this.store[`${status}Any`] || this.store.any
+			const handlerByStatusAndTag = this.store.get(status)?.get(tag) || this.store.get(status)?.get(MATCH_DEFAULT_HANDLER)
+			const handlerFallback = this.store.get('any')?.get(tag) || this.store.get('any')?.get(MATCH_DEFAULT_HANDLER)
+			const handler = handlerByStatusAndTag || handlerFallback
 
 			const result = FlowTrySync(() => ResultOkFromUnlessError(handler ? handler(this.inputResult) : this.inputResult))
 			return cb(!handler, result) as ResultAny // eslint-disable-line @typescript-eslint/no-unnecessary-type-assertion
 		})
 
 		return result as FlowTrySync<R1>
-	}
-
-	/**
-	 * Creates an isolated handler store for a new chain step.
-	 *
-	 * @param base
-	 * Optional store to copy.
-	 *
-	 * @returns
-	 * New mutable store for the next chain instance.
-	 */
-	private _createStore(base?: Match.Store): Match.Store {
-		return {
-			ok: new Map(base?.ok),
-			error: new Map(base?.error),
-			okAny: base?.okAny,
-			errorAny: base?.errorAny,
-			any: base?.any,
-		}
-	}
-
-	/**
-	 * Builds a tag-specific chain method.
-	 *
-	 * @template S
-	 * Result status handled by the method.
-	 *
-	 * @param status
-	 * Result status to match.
-	 *
-	 * @returns
-	 * Chain method for tags under the given status.
-	 */
-	private _withTag <S extends Result.Status>(status: S): Match.WithTag<K, S, R, L> {
-		return ((tags, handler) => {
-			const store = this._createStore(this.store)
-			if (!store.usageError) tags.some((tag) => {
-				const alreadyExist = store[status].has(tag)
-				if (alreadyExist) return store.usageError = UtilsErrorRuntime(`A handler is already defined for ${status}:${tag || 'null'}.`)
-				else store[status].set(tag, handler as Match.Handler)
-			})
-
-			return new this.target(this.inputResult, store)
-		}) as Match.WithTag<K, S, R, L>
-	}
-
-	/**
-	 * Builds a status-wide or fallback chain method.
-	 *
-	 * @template S
-	 * Status selector handled by the method.
-	 *
-	 * @param status
-	 * Status selector to match.
-	 *
-	 * @returns
-	 * Chain method for the requested status selector.
-	 */
-	private _withStatus <S extends Result.Status | 'any'>(status: S): Match.WithStatus<K, S, R, L> {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-		const prop = status === 'any' ? 'any' : `${status as Result.Status}Any` as const
-
-		return ((handler: Match.Handler) => {
-			const store = this._createStore(this.store)
-			if (!store.usageError) {
-				const alreadyExist = !!store[prop]
-				if (alreadyExist) return store.usageError = UtilsErrorRuntime(`A handler is already defined for ${status}.`)
-				else store[prop] = handler
-			}
-
-			return new this.target(this.inputResult, store)
-		}) as Match.WithStatus<K, S, R, L>
 	}
 }

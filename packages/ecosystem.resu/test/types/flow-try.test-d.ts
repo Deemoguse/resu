@@ -1,122 +1,61 @@
 import { expectError, expectType } from 'tsd'
-import { ResultErrorFrom } from '../../src/operations/result-error-from'
-import { ResultOkFrom } from '../../src/operations/result-ok-from'
-import { FlowTrySync } from '../../src/operations/flow-try-sync'
-import { FlowTryAsync } from '../../src/operations/flow-try-async'
-import type { UtilsErrorAbort } from '../../src/utils/utils-error-abort'
-import type { UtilsErrorRuntime } from '../../src/utils/utils-error-runtime'
-import type { FailureResult, OkResult } from './_shared'
+import { Flow, Result, Utils } from '../../src/namespaces/index'
 
-const signal = new AbortController().signal
-const failureTag = 'Failure' as const
-
-type SuccessValue = number
-type FailureText = string
-type CatchFailure = ResultErrorFrom<FailureText>
-type TaggedFailure = FailureResult<SuccessValue>
-
-type SyncSuccess = FlowTrySync<SuccessValue>
-type AsyncSuccess = FlowTryAsync<SuccessValue>
-type SyncWithCatch = FlowTrySync<SuccessValue, CatchFailure>
-type AsyncWithCatch = FlowTryAsync<SuccessValue, CatchFailure>
-type TaggedFailureResult = UtilsErrorRuntime | TaggedFailure
-type AbortableAsyncSuccess = Promise<UtilsErrorRuntime | UtilsErrorAbort | OkResult<SuccessValue>>
-
-const catchFailure = (): CatchFailure => ResultErrorFrom('str' as FailureText)
-
-// Basic inference
+// Callback and object forms infer the same result in both execution modes.
 {
-	const syncRaw = FlowTrySync((): SuccessValue => 1)
-	const syncError = FlowTrySync(() => ResultErrorFrom(1 as SuccessValue, failureTag))
-	const asyncWithoutPromise = FlowTryAsync((): SuccessValue => 1)
-	const asyncWithPromise = FlowTryAsync(async (): Promise<SuccessValue> => 1)
-	const abortableAsync = FlowTryAsync({
-		signal,
-		try: (currentSignal): SuccessValue => currentSignal.aborted ? 0 : 1,
-	})
-
-	expectType<SyncSuccess>(syncRaw)
-	expectType<TaggedFailureResult>(syncError)
-	expectType<AsyncSuccess>(asyncWithoutPromise)
-	expectType<AsyncSuccess>(asyncWithPromise)
-	expectType<AbortableAsyncSuccess>(abortableAsync)
+	expectType<Flow.Try.Sync<number>>(Flow.Try.Sync((): number => 1))
+	expectType<Flow.Try.Sync<number>>(Flow.Try.Sync({ try: (): number => 1 }))
+	expectType<Flow.Try.Async<number>>(Flow.Try.Async((): number => 1))
+	expectType<Flow.Try.Async<number>>(Flow.Try.Async(async (): Promise<number> => 1))
+	expectType<Flow.Try.Sync<Result.Error<'Failure', number>>>(Flow.Try.Sync(() => Result.Error({ tag: 'Failure', data: 1 as number })))
+	expectType<Flow.Try.Async<Result.Error<'Failure', number>>>(Flow.Try.Async(async () => Result.Error({ tag: 'Failure', data: 1 as number })))
 }
 
-// Raw try values and wrapped ResultOk values share the same public result
+// Sources may be raw values or untagged successes; explicit errors stay errors.
 {
-	const syncRaw = FlowTrySync<SuccessValue, CatchFailure>({
-		try: (): SuccessValue => 32,
-		catch: catchFailure,
-	})
-	const asyncRaw = FlowTryAsync<SuccessValue, CatchFailure>({
-		try: async (): Promise<SuccessValue> => 32,
-		catch: async (): Promise<CatchFailure> => catchFailure(),
-	})
-	const syncOk = FlowTrySync<SuccessValue, CatchFailure>({
-		try: () => ResultOkFrom(32 as SuccessValue),
-		catch: catchFailure,
-	})
-	const asyncOk = FlowTryAsync<SuccessValue, CatchFailure>({
-		try: async () => ResultOkFrom(32 as SuccessValue),
-		catch: async (): Promise<CatchFailure> => catchFailure(),
-	})
-
-	expectType<SyncWithCatch>(syncRaw)
-	expectType<AsyncWithCatch>(asyncRaw)
-	expectType<SyncWithCatch>(syncOk)
-	expectType<AsyncWithCatch>(asyncOk)
+	type Failure = Result.ErrorFrom<string>
+	const recover = (): Failure => Result.ErrorFrom('broken' as string)
+	expectType<Flow.Try.Sync<number, Failure>>(Flow.Try.Sync<number, Failure>({ try: () => 32, catch: recover }))
+	expectType<Flow.Try.Sync<number, Failure>>(Flow.Try.Sync<number, Failure>({ try: () => Result.OkFrom(32), catch: recover }))
+	expectType<Flow.Try.Sync<number, Failure>>(Flow.Try.Sync<Result.OkFrom<number>, Failure>({ try: () => 32, catch: recover }))
+	expectType<Flow.Try.Async<number, Failure>>(Flow.Try.Async<Result.OkFrom<number>, Failure>({ try: async () => 32, catch: async () => recover() }))
+	expectType<Flow.Try.Async<number, Failure>>(Flow.Try.Async<number, Failure>({ try: async () => Result.OkFrom(32), catch: recover }))
+	expectError(Flow.Try.Sync<number, Failure>({ try: () => 1, catch: () => 'broken' }))
+	expectError(Flow.Try.Async<number, Failure>({ try: async () => 1, catch: () => 'broken' }))
 }
 
-// ResultOk sources stay flat when declared as the try value
+// Recovery can also produce a success. Async recovery receives an unknown error.
 {
-	const syncRawSource = FlowTrySync<ResultOkFrom<SuccessValue>, CatchFailure>({
-		try: (): SuccessValue => 32,
-		catch: catchFailure,
-	})
-	const asyncRawSource = FlowTryAsync<ResultOkFrom<SuccessValue>, CatchFailure>({
-		try: async (): Promise<SuccessValue> => 32,
-		catch: async (): Promise<CatchFailure> => catchFailure(),
-	})
-	const syncOkSource = FlowTrySync<ResultOkFrom<SuccessValue>, CatchFailure>({
-		try: () => ResultOkFrom(32 as SuccessValue),
-		catch: catchFailure,
-	})
-	const asyncOkSource = FlowTryAsync<ResultOkFrom<SuccessValue>, CatchFailure>({
-		try: async () => ResultOkFrom(32 as SuccessValue),
-		catch: async (): Promise<CatchFailure> => catchFailure(),
-	})
-
-	expectType<SyncWithCatch>(syncRawSource)
-	expectType<AsyncWithCatch>(asyncRawSource)
-	expectType<SyncWithCatch>(syncOkSource)
-	expectType<AsyncWithCatch>(asyncOkSource)
-}
-
-// Catch values must already be ResultError values
-{
-	const syncCaught = FlowTrySync<SuccessValue, CatchFailure>({
-		try: (): SuccessValue => 32,
-		catch: catchFailure,
-	})
-	const asyncCaught = FlowTryAsync<SuccessValue, CatchFailure>({
-		try: async () => Promise.resolve(32),
-		catch: () => catchFailure(),
-	})
-
-	expectType<SyncWithCatch>(syncCaught)
-	expectType<AsyncWithCatch>(asyncCaught)
-	expectError(FlowTrySync<SuccessValue, CatchFailure>({
-		try: () => 32,
-		catch: () => 'str',
-	}))
-	expectError(FlowTryAsync<SuccessValue, CatchFailure>({
-		try: async () => 32,
-		catch: () => 'str',
+	expectType<Flow.Try.Sync<number, string>>(Flow.Try.Sync({ try: (): number => 1, catch: (): string => 'recovered' }))
+	expectType<Flow.Try.Async<number, string>>(Flow.Try.Async({
+		try: async (): Promise<number> => 1,
+		catch: async (error): Promise<string> => {
+			expectType<unknown>(error)
+			return 'recovered'
+		},
 	}))
 }
 
-// Undefined returns are rejected
+// Cancellation adds AbortError and supplies the exact signal type to the callback.
 {
-	expectError(FlowTrySync(() => undefined))
-	expectError(FlowTryAsync(async () => undefined))
+	const result = Flow.Try.Async({
+		signal: new AbortController().signal,
+		try: (signal): number => {
+			expectType<AbortSignal>(signal)
+			return 1
+		},
+	})
+	expectType<Promise<Utils.RuntimeError | Utils.AbortError | Result.Ok<null, number>>>(result)
+	expectError(Flow.Try.Async({ signal: 'invalid', try: () => 1 }))
+}
+
+// Undefined, void, and promises in sync sources are rejected.
+{
+	expectError(Flow.Try.Sync(() => undefined))
+	expectError(Flow.Try.Sync(() => {}))
+	expectError(Flow.Try.Sync(async () => 1))
+	expectError(Flow.Try.Async(async () => undefined))
+	expectError(Flow.Try.Async(() => {}))
+	expectError(Flow.Try.Sync({ try: () => 1, catch: () => undefined }))
+	expectError(Flow.Try.Async({ try: () => 1, catch: async () => undefined }))
 }

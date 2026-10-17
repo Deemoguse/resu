@@ -20,10 +20,10 @@ export namespace FlowFunctionWith {
 	 */
 	export type Return<
 		M extends 'sync' | 'async',
-		A extends unknown[],
 		R,
+		A extends unknown[] = [],
 	> =
-		[M, A, R] extends [unknown, unknown, unknown]
+		[M, R, A] extends [unknown, unknown, unknown]
 			? M extends 'sync'
 				? (...args: A) => FlowTrySync<R>
 				: (...args: A) => FlowTryAsync<R>
@@ -40,11 +40,11 @@ export type FlowFunctionWith<M extends 'sync' | 'async'> =
 	[M] extends [unknown]
 		? M extends 'sync'
 			? {
-				<R, A extends unknown[]>(func: (...args: A) => UtilsNonUndefinedSource<R>): FlowFunctionWith.Return<M, A, R>
+				<R, A extends unknown[] = []>(func: (...args: A) => UtilsNonUndefinedSource<R>): FlowFunctionWith.Return<M, R, A>
 			}
 			: {
-				<R, A extends unknown[]>(func: (...args: A) => Promise<UtilsNonUndefinedSource<R>>): FlowFunctionWith.Return<M, A, R>
-				<R, A extends unknown[]>(func: (...args: A) => UtilsNonUndefinedSource<R>): FlowFunctionWith.Return<M, A, R>
+				<R, A extends unknown[] = []>(func: (...args: A) => Promise<UtilsNonUndefinedSource<R>>): FlowFunctionWith.Return<M, R, A>
+				<R, A extends unknown[] = []>(func: (...args: A) => UtilsNonUndefinedSource<R>): FlowFunctionWith.Return<M, R, A>
 			}
 		: never
 

@@ -17,7 +17,7 @@ export namespace UtilsCreateErrorWith {
 	 */
 	export type Return<
 		T extends Result.Tag,
-		D = Result.AnyData,
+		D = Result.Data,
 	> =
 		[T, D] extends [unknown, unknown]
 			? ResultErrorFrom<D, T>

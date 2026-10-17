@@ -52,7 +52,7 @@ export namespace FlowTryWith {
 				/**
 				 * Optional recovery branch for thrown errors.
 				 */
-				catch?: () => UtilsNonUndefinedSource<C>
+				catch?: (error: unknown) => UtilsNonUndefinedSource<C>
 			}
 			: never
 
@@ -270,7 +270,7 @@ export function FlowTryWith<M extends 'sync' | 'async'>(mode: M): FlowTryWith<M>
 			}
 		}
 		else if (signal?.aborted) {
-			return UtilsErrorAbort()
+			return Promise.resolve(UtilsErrorAbort())
 		}
 		else return new Promise<ResultAny>((res) => {
 			const tryFnPromise = (signal?: AbortSignal) => promiseResultWrap(Promise.resolve(signal).then(tryFn))

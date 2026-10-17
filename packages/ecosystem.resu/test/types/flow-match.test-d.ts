@@ -1,110 +1,133 @@
 import { expectError, expectType } from 'tsd'
-import { ResultOk } from '../../src/operations/result-ok'
-import { ResultError } from '../../src/operations/result-error'
-import { ResultErrorFrom } from '../../src/operations/result-error-from'
-import { ResultOkFrom } from '../../src/operations/result-ok-from'
-import { FlowMatchStrict } from '../../src/operations/flow-match-strict'
-import { FlowMatchLoose } from '../../src/operations/flow-match-loose'
-import type { FlowTrySync } from '../../src/operations/flow-try-sync'
-import type { FailureResult, OkResult, ReadyResult } from './_shared'
+import { Flow, Result } from '../../src/namespaces/index'
 
-type ReadyValue = number
-type FailureText = string
-type ReadyInput = ReadyResult<ReadyValue>
-type FailureInput = FailureResult<FailureText>
-type Input = ReadyInput | FailureInput
+type Ready = Result.Ok<'Ready', number>
+type Other = Result.Ok<'Other', boolean>
+type Failure = Result.Error<'Failure', string>
+type Untagged = Result.Error<null, Error>
+type Input = Ready | Other | Failure | Untagged
+declare const input: Input
+type SharedOk = Result.Ok<'Shared', number>
+type SharedError = Result.Error<'Shared', string>
+declare const shared: SharedOk | SharedError
 
-type ReadyTextResult = ResultOkFrom<string>
-type FailureLengthResult = ResultOkFrom<number>
-type StatusResult = OkResult<'ok'> | OkResult<'error'>
-type NumberResult = ResultOkFrom<number>
-type HandlerFailure = ResultErrorFrom<FailureText>
+type Text = Result.Ok<'Text', string>
+declare const mixed: Ready | Text
 
-type ReadyHandledMatch = FlowMatchLoose<ReadyTextResult, FailureInput>
-type ReadyHandledTry = FlowTrySync<ReadyTextResult | FailureInput>
-type FullyHandledMatch = FlowMatchLoose<ReadyTextResult | FailureLengthResult, never>
-type FullyHandledTry = FlowTrySync<ReadyTextResult | FailureLengthResult>
-type StrictStatusMatch = FlowMatchStrict<StatusResult, never>
-type StrictStatusTry = FlowTrySync<StatusResult>
-type LooseNumberMatch = FlowMatchLoose<NumberResult, FailureInput>
-type LooseNumberTry = FlowTrySync<NumberResult | FailureInput>
-type StrictNumberMatch = FlowMatchStrict<NumberResult, never>
-type StrictNumberTry = FlowTrySync<NumberResult>
-type LooseFailureMatch = FlowMatchLoose<HandlerFailure, ReadyInput>
-type StrictFailureMatch = FlowMatchStrict<HandlerFailure, ReadyInput>
-type FailureHandlerTry = FlowTrySync<HandlerFailure | ReadyInput>
-
-const input = Math.random() > 0.5
-	? ResultOk({ tag: 'Ready', data: 1 as ReadyValue })
-	: ResultError({ tag: 'Failure', data: 'broken' as FailureText })
-
-const readyTags: ['Ready'] = ['Ready']
-const failureTags: ['Failure'] = ['Failure']
-
-// Basic inference
+// Selectors narrow handler inputs and remove only the variants actually handled.
 {
-	const handledReady = FlowMatchLoose<never, Input>(input).ok(readyTags, (result) => {
-		expectType<ReadyInput>(result)
+	const ready = Flow.Match.Loose(input).case('ok', 'Ready', (result): string => {
+		expectType<Ready>(result)
 		return result.data.toString()
 	})
-	const fullyHandled = handledReady.error(failureTags, (result) => {
-		expectType<FailureInput>(result)
-		return result.data.length
+	expectType<Flow.Match.Loose<Result.OkFrom<string>, Other | Failure | Untagged>>(ready)
+	expectType<Flow.Try.Sync<Result.OkFrom<string> | Other | Failure | Untagged>>(ready.result())
+
+	Flow.Match.Loose(input).case('ok', ['Ready', 'Other'], (result): number => {
+		expectType<Ready | Other>(result)
+		return Number(result.data)
 	})
-	const handledAny = FlowMatchStrict<never, Input>(input).any((result) => result.status)
-
-	expectType<ReadyHandledMatch>(handledReady)
-	expectType<ReadyHandledTry>(handledReady.result())
-	// expectError(handledReady.ok(readyTags, () => 'again'))
-	// expectError(FlowMatchLoose<never, Input>(input).ok(readyTags, () => undefined))
-
-	expectType<FullyHandledMatch>(fullyHandled)
-	expectType<FullyHandledTry>(fullyHandled.result())
-	// expectError(fullyHandled.error(failureTags, () => 1))
-
-	expectType<StrictStatusMatch>(handledAny)
-	expectType<StrictStatusTry>(handledAny.result())
-	// expectError(handledAny.any(() => 'again'))
-	// expectError(FlowMatchStrict<never, Input>(input).any(() => undefined))
+	Flow.Match.Loose(input).case('error', null, (result): string => {
+		expectType<Untagged>(result)
+		return result.data.message
+	})
 }
 
-// Loose handlers wrap raw values and keep ResultOk values flat
+// Status handlers and any fallback infer exactly the remaining union.
 {
-	const rawValue = FlowMatchLoose<never, Input>(input).ok<'Ready', ReadyValue>(readyTags,(): ReadyValue => 32)
-	const rawResultSource = FlowMatchLoose<never, Input>(input).ok<'Ready', ResultOkFrom<ReadyValue>>(readyTags,(): ReadyValue => 32)
-	const okResultSource = FlowMatchLoose<never, Input>(input).ok<'Ready', ResultOkFrom<ReadyValue>>(readyTags,() => ResultOkFrom(32 as ReadyValue))
+	const partial = Flow.Match.Strict(input).case('ok', (result): number => {
+		expectType<Ready | Other>(result)
+		return Number(result.data)
+	})
+	expectError(partial.result())
+	expectError(partial.result(false))
+	expectType<Flow.Try.Sync<Result.OkFrom<number> | Failure | Untagged>>(partial.result(true))
 
-	expectType<LooseNumberMatch>(rawValue)
-	expectType<LooseNumberTry>(rawValue.result())
-	expectType<LooseNumberMatch>(rawResultSource)
-	expectType<LooseNumberTry>(rawResultSource.result())
-	expectType<LooseNumberMatch>(okResultSource)
-	expectType<LooseNumberTry>(okResultSource.result())
+	const complete = partial.case('any', (result): string => {
+		expectType<Failure | Untagged>(result)
+		return String(result.data)
+	})
+	expectType<Flow.Match.Strict<Result.OkFrom<number> | Result.OkFrom<string>, never>>(complete)
+	expectType<Flow.Try.Sync<Result.OkFrom<number> | Result.OkFrom<string>>>(complete.result())
+	expectError(complete.result(true))
+	expectError(complete.case('any', () => 1))
 }
 
-// Strict handlers wrap raw values and keep ResultOk values flat
+// Shared tags are handled separately per status, or by an unfiltered fallback.
 {
-	const rawValue = FlowMatchStrict<never, Input>(input).any<ReadyValue>((): ReadyValue => 32)
-	const rawResultSource = FlowMatchStrict<never, Input>(input).any<ResultOkFrom<ReadyValue>>((): ReadyValue => 32)
-	const okResultSource = FlowMatchStrict<never, Input>(input).any<ResultOkFrom<ReadyValue>>(() => ResultOkFrom(32 as ReadyValue))
+	const okHandled = Flow.Match.Strict(shared).case('ok', 'Shared', (result): string => {
+		expectType<SharedOk>(result)
+		return result.data.toString()
+	})
+	expectType<Flow.Match.Strict<Result.OkFrom<string>, SharedError>>(okHandled)
+	expectError(okHandled.result())
+	const handled = okHandled.case('error', 'Shared', (result): string => {
+		expectType<SharedError>(result)
+		return result.data.toUpperCase()
+	})
+	expectType<Flow.Match.Strict<Result.OkFrom<string>, never>>(handled)
+	expectType<Flow.Try.Sync<Result.OkFrom<string>>>(handled.result())
 
-	expectType<StrictNumberMatch>(rawValue)
-	expectType<StrictNumberTry>(rawValue.result())
-	expectType<StrictNumberMatch>(rawResultSource)
-	expectType<StrictNumberTry>(rawResultSource.result())
-	expectType<StrictNumberMatch>(okResultSource)
-	expectType<StrictNumberTry>(okResultSource.result())
+	const fallback = Flow.Match.Strict(shared).case('any', (result): boolean => {
+		expectType<SharedOk | SharedError>(result)
+		return result.status === 'ok'
+	})
+	expectType<Flow.Match.Strict<Result.OkFrom<boolean>, never>>(fallback)
+	expectType<Flow.Try.Sync<Result.OkFrom<boolean>>>(fallback.result())
 }
 
-// Existing ResultError values stay on the error branch
+// Any is a fallback only: even valid input tags cannot select variants under it.
 {
-	const looseError = FlowMatchLoose<never, Input>(input).error<'Failure', HandlerFailure>(failureTags, () => ResultErrorFrom('str' as FailureText))
-	const strictError = FlowMatchStrict<never, Input>(input).error<'Failure', HandlerFailure>(failureTags, () => ResultErrorFrom('str' as FailureText))
+	expectError(Flow.Match.Loose(input).case('any', 'Ready', () => 1))
+	expectError(Flow.Match.Loose(input).case('any', ['Ready', 'Failure'], () => 1))
+	expectError(Flow.Match.Loose(input).case('any', null, () => 1))
+	expectError(Flow.Match.Loose(input).case('any', [null], () => 1))
+	expectError(Flow.Match.Strict(input).case('any', 'Ready', () => 1))
+	expectError(Flow.Match.Strict(input).case('any', ['Ready', 'Failure'], () => 1))
+	expectError(Flow.Match.Strict(input).case('any', null, () => 1))
+	expectError(Flow.Match.Strict(input).case('any', [null], () => 1))
+	expectError(Flow.Match.Strict(shared).case<'any', 'Shared', boolean>('any', 'Shared', () => true))
+}
 
-	expectType<LooseFailureMatch>(looseError)
-	expectType<StrictFailureMatch>(strictError)
-	expectType<FailureHandlerTry>(looseError.result())
-	expectType<FailureHandlerTry>(strictError.result())
-	expectError(FlowMatchLoose<never, Input>(input).error<'Failure', HandlerFailure>(failureTags, () => 'str'))
-	expectError(FlowMatchStrict<never, Input>(input).error<'Failure', HandlerFailure>(failureTags, () => 'str'))
+// A status-wide handler after a tag case receives only the other payload types.
+{
+	const ready = Flow.Match.Strict(mixed).case('ok', 'Ready', (result): string => {
+		expectType<Ready>(result)
+		return result.data.toString()
+	})
+	const complete = ready.case('ok', (result): string => {
+		expectType<Text>(result)
+		return result.data.toUpperCase()
+	})
+	expectType<Flow.Match.Strict<Result.OkFrom<string>, never>>(complete)
+	expectType<Flow.Try.Sync<Result.OkFrom<string>>>(complete.result())
+}
+
+// Raw values and untagged ResultOk sources have the same accumulated type.
+{
+	const raw = Flow.Match.Loose(input).case<'ok', 'Ready', Result.OkFrom<number>>('ok', 'Ready', () => 32)
+	const wrapped = Flow.Match.Loose(input).case<'ok', 'Ready', Result.OkFrom<number>>('ok', 'Ready', () => Result.OkFrom(32))
+	expectType<Flow.Match.Loose<Result.OkFrom<number>, Other | Failure | Untagged>>(raw)
+	expectType<Flow.Match.Loose<Result.OkFrom<number>, Other | Failure | Untagged>>(wrapped)
+
+	type HandlerFailure = Result.ErrorFrom<string>
+	const error = Flow.Match.Strict(input).case<'ok', 'Ready', HandlerFailure>('ok', 'Ready', () => Result.ErrorFrom('broken'))
+	expectType<Flow.Try.Sync<HandlerFailure | Other | Failure | Untagged>>(error.result(true))
+	expectError(Flow.Match.Loose(input).case<'ok', 'Ready', HandlerFailure>('ok', 'Ready', () => 'broken'))
+}
+
+// Invalid selectors and outputs must fail during compilation.
+{
+	const ready = Flow.Match.Loose(input).case('ok', 'Ready', () => 1)
+	expectError(ready.case('ok', 'Ready', () => 2))
+	expectError(Flow.Match.Loose(input).case('ok', 'Failure', () => 1))
+	expectError(Flow.Match.Loose(input).case('error', 'Ready', () => 1))
+	expectError(Flow.Match.Loose(input).case('any', 'Missing', () => 1))
+	expectError(Flow.Match.Loose(input).case('ok', [], () => 1))
+	expectError(Flow.Match.Loose(input).case('ok', ['Ready', 'Missing'], () => 1))
+	expectError(Flow.Match.Loose(input).case('unknown', () => 1))
+	expectError(Flow.Match.Loose(input).case('ok', 'Ready', (result: Failure) => result.data))
+	expectError(Flow.Match.Loose(input).case('any', () => undefined))
+	expectError(Flow.Match.Strict(input).case('any', () => {}))
+	expectError(Flow.Match.Strict(input).case('any', async () => 1))
 }

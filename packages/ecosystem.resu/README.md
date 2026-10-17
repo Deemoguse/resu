@@ -3,7 +3,7 @@
 **English** | [Русский](README.ru.md)
 
 > [!WARNING]
-> **Status: WIP.** The current API version is `0.0.1`. Public names, types, import paths, and behavior may change without backward compatibility.
+> **Status: WIP.** The current API version is `0.0.*`. Public names, types, import paths, and behavior may change without backward compatibility.
 
 `resu` represents successful and failed outcomes as typed `Result` values. It lets you model expected domain errors explicitly, narrow them with TypeScript, and compose operations without requiring `throw`/`catch` in calling code.
 
@@ -20,7 +20,7 @@ Use `resu` when failure is an expected outcome of an operation, such as validati
 - [Safe functions: Flow.Function](#safe-functions-flowfunction)
 - [Matching: Flow.Match](#matching-flowmatch)
 - [Sequential computations: Runtime](#sequential-computations-runtime)
-- [Observing Result values: emitters](#observing-result-values-emitters)
+- [Observing Result values: Emitter](#observing-result-values-emitter)
 - [Types and utilities](#types-and-utilities)
 - [Subpath imports](#subpath-imports)
 - [WIP limitations](#wip-limitations)
@@ -33,7 +33,7 @@ Use `resu` when failure is an expected outcome of an operation, such as validati
 Install the package from npm:
 
 ```bash
-npm install resu
+npm install @wambata/resu
 ```
 
 | Environment | Current contract |
@@ -42,18 +42,18 @@ npm install resu
 | ESM | Available through `import` |
 | CommonJS | Available through `require` |
 | TypeScript | Type declarations are included in the package |
-| Browser | Compatibility is not guaranteed yet; emitters and cancellation require `EventTarget`, `CustomEvent`, `AbortSignal`, and `AbortController` |
+| Browser | Compatibility is not guaranteed yet; cancellation requires `AbortSignal` and `AbortController` |
 
 For most use cases, import the namespaces from the root entry point:
 
 ```ts
-import { Flow, Result, Runtime, Utils } from 'resu'
+import { Flow, Result, Runtime, Utils } from '@wambata/resu'
 ```
 
 The CommonJS entry point provides the same namespaces:
 
 ```js
-const { Flow, Result, Runtime, Utils } = require('resu')
+const { Flow, Result, Runtime, Utils } = require('@wambata/resu')
 ```
 
 Public subpath imports are listed near the end of this document.
@@ -63,7 +63,7 @@ Public subpath imports are listed near the end of this document.
 The following example safely parses JSON, validates the data shape, and returns separate domain errors for invalid syntax and invalid content:
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 type Settings = {
 	theme: 'dark' | 'light'
@@ -114,7 +114,7 @@ This example prints `dark`. Invalid JSON returns `InvalidJson`, while valid JSON
 | Create a reusable safe function | `Flow.Function` |
 | Transform a result by status or tag | `Flow.Match` |
 | Run dependent steps with early exit | `Runtime.Gen` and `Runtime.Unwrap*` |
-| Observe created results | `Result.Emitters` |
+| Observe created results | `Result.Emitter.Subscribe` |
 
 ## The `Result` model
 
@@ -146,7 +146,7 @@ type ResultShape =
 Plain data is wrapped in `Result.Ok`. An explicit `Result` becomes the public outcome of the operation: its `status`, `tag`, and `data` are preserved instead of being stored in the `data` of another `ok`.
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const fromValue = Flow.Try.Sync(() => 42)
 // ok: { tag: null, data: 42 }
@@ -181,7 +181,7 @@ Public flow callback types do not accept `undefined` or `void`. Use the async va
 Both constructors accept an object with optional `tag`, `data`, and `emit` properties. When a tag or data value is omitted, the corresponding field is `null`.
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
 const ready = Result.Ok({
 	tag: 'Ready',
@@ -208,7 +208,7 @@ Use `tag` as a stable variant identifier and `data` as its typed payload.
 The type guards accept `unknown` and narrow it to any `Result` or to a specific branch:
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
 function printResult(value: unknown) {
 	if (!Result.Is(value)) return
@@ -231,7 +231,7 @@ An object with similar fields is not enough. Create results with the package con
 The `From` operations create the selected branch from a plain value or an existing `Result`. For a `Result` input, they preserve its `data`; a supplied tag replaces the original tag.
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
 const answer = Result.OkFrom(42, 'Answer')
 const rejected = Result.ErrorFrom(answer, 'Rejected')
@@ -244,7 +244,7 @@ rejected.data // 42
 When no new tag is supplied, an input `Result` keeps its existing tag. Pass `null` to clear it explicitly:
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
 const source = Result.Error({ tag: 'NetworkError', data: 'offline' })
 
@@ -260,7 +260,7 @@ untagged.tag  // null
 `Result.OkFromUnlessError` creates `ok` from a plain value or an input `ok`, but preserves an input `error` branch. `Result.ErrorFromUnlessOk` is the inverse: it creates `error` unless the input is already `ok`.
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
 const loaded = Result.Ok({ tag: 'Loaded', data: 42 })
 const failed = Result.Error({ tag: 'NetworkError', data: 'offline' })
@@ -295,7 +295,7 @@ These operations are useful at API boundaries when a plain value must be convert
 A plain returned value becomes `ok`. A thrown exception becomes `error` tagged `RuntimeError`:
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const parsed = Flow.Try.Sync(() => {
 	const value: unknown = JSON.parse('{"count":2}')
@@ -313,7 +313,7 @@ if (Result.IsError(invalid)) console.error(invalid.tag)
 The function may return an expected domain outcome itself. This `Result` is not nested inside the `data` of a new `ok`:
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const port = Flow.Try.Sync(() => {
 	const value = Number('0')
@@ -333,7 +333,7 @@ if (Result.IsError(port)) {
 The object form separates the primary operation from its fallback outcome. In `Flow.Try.Sync`, the `catch` function is called without arguments, and its return value follows the standard normalization rules:
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const settings = Flow.Try.Sync({
 	try: () => JSON.parse('{') as unknown,
@@ -351,7 +351,7 @@ if (Result.IsError(settings)) console.error(settings.tag)
 `Flow.Try.Async` always returns a Promise. After `await`, the variable contains the resolved `Result`:
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const countPromise = Flow.Try.Async(() => 3)
 const count = await countPromise
@@ -362,7 +362,7 @@ if (Result.IsOk(count)) console.log(count.data)
 When using `fetch`, check the HTTP status separately. Responses in the 4xx and 5xx ranges do not reject the Promise by themselves.
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const user = await Flow.Try.Async(async () => {
 	const response = await fetch('https://api.example.com/users/42')
@@ -388,7 +388,7 @@ Replace `https://api.example.com` with the address of your API. A thrown excepti
 The object form of an async operation accepts a `signal`. The same signal is passed to `try`, while `catch` receives a rejected or thrown value as `unknown`:
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const controller = new AbortController()
 
@@ -419,7 +419,7 @@ Cancellation returns the distinct `AbortError` tag.
 ### Synchronous function
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const divide = Flow.Function.Sync((left: number, right: number) => {
 	if (right === 0) throw new Error('Division by zero')
@@ -438,7 +438,7 @@ A plain value becomes `Result.Ok`, while an exception becomes `RuntimeError`.
 ### Function with domain outcomes
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const validateName = Flow.Function.Sync((source: string) => {
 	const name = source.trim()
@@ -462,7 +462,7 @@ An explicit `Result` becomes the call outcome without additional nesting.
 `Flow.Function.Async` accepts a synchronous or asynchronous function and always creates a function that returns `Promise<Result>`:
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const readLength = Flow.Function.Async((value: string) => value.length)
 const length = await readLength('ready')
@@ -474,25 +474,33 @@ An asynchronous function can also return an explicit domain `Result`, as shown i
 
 ## Matching: `Flow.Match`
 
-`Flow.Match` selects a handler by `status` and `tag`. The chain runs when `.result()` is called.
+`Flow.Match` selects a synchronous handler by `status` and `tag`. Register handlers with `.case()`; each registration creates a new chain without changing the original. Every `.result()` call evaluates the chain again and runs at most one handler.
 
 | Method | Purpose |
 |---|---|
-| `.ok(tags, handler)` | Handle the listed tags from the `ok` branch |
-| `.error(tags, handler)` | Handle the listed tags from the `error` branch |
-| `.okAny(handler)` | Handle any tag from the `ok` branch |
-| `.errorAny(handler)` | Handle any tag from the `error` branch |
-| `.any(handler)` | Define a general fallback handler |
-| `.result()` | Run the match and return a `Result` |
+| `.case('ok', tagOrTags, handler)` | Handle selected tags from the `ok` branch |
+| `.case('error', tagOrTags, handler)` | Handle selected tags from the `error` branch |
+| `.case('ok', handler)` | Handle remaining `ok` variants |
+| `.case('error', handler)` | Handle remaining `error` variants |
+| `.case('any', handler)` | Define a fallback for all remaining variants |
+| `.result()` | Evaluate a loose chain or an exhaustive strict chain |
+| `.result(true)` | Evaluate a partial strict chain and preserve unmatched results |
 
-`Loose` preserves the input `Result` when no handler matches. `Strict` returns `RuntimeError` in that case.
+The `.case()` overloads replace the previous separate tag and status methods. For `'ok'` and `'error'`, pass one tag or a non-empty array of tags; use `null` or `[null]` for an untagged result. `'any'` accepts only `.case('any', handler)`, without a tag selector. TypeScript rejects tags for `'any'`; JavaScript callers must follow the same two-argument contract.
+
+TypeScript narrows each handler input to matching variants not covered by earlier cases. It rejects Promises, `undefined`, and `void` as handler outputs.
+
+- `Loose` allows partial matching and preserves the input status, tag, and data when no handler matches.
+- In TypeScript, `Strict.result()` without arguments requires handlers for every variant in the input union. If variants remain, either add cases or explicitly allow them with `.result(true)`.
+- Once all variants are handled, the typed strict `.result()` call accepts no arguments.
+- At runtime, a strict evaluation without the flag returns `RuntimeError` when no handler matches. With `true`, it preserves the unmatched input status, tag, and data.
 
 ### Matching by tag
 
 The example below is deterministic: both branches are passed to the same function explicitly.
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const ready = Result.Ok({ tag: 'Ready', data: 2 })
 const failure = Result.Error({ tag: 'Failure', data: 'broken' })
@@ -501,8 +509,8 @@ type Input = typeof ready | typeof failure
 
 function transform(input: Input) {
 	return Flow.Match.Strict(input)
-		.ok(['Ready'], (current) => current.data * 2)
-		.error(['Failure'], (current) => current.data.toUpperCase())
+		.case('ok', ['Ready'], (current) => current.data * 2)
+		.case('error', ['Failure'], (current) => current.data.toUpperCase())
 		.result()
 }
 
@@ -518,7 +526,7 @@ Plain handler values are normalized to `Result.Ok`.
 ### Partial and broad matching
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const ready = Result.Ok({ tag: 'Ready', data: 2 })
 const failure = Result.Error({ tag: 'Failure', data: 'broken' })
@@ -526,14 +534,14 @@ type Input = typeof ready | typeof failure
 
 function transformReady(input: Input) {
 	return Flow.Match.Loose(input)
-		.ok(['Ready'], (current) => current.data * 2)
+		.case('ok', ['Ready'], (current) => current.data * 2)
 		.result()
 }
 
 function summarize(input: Input) {
 	return Flow.Match.Strict(input)
-		.okAny((current) => `ok:${String(current.data)}`)
-		.errorAny((current) => `error:${String(current.data)}`)
+		.case('ok', (current) => `ok:${String(current.data)}`)
+		.case('error', (current) => `error:${String(current.data)}`)
 		.result()
 }
 
@@ -544,17 +552,62 @@ if (Result.IsError(unchangedFailure)) console.error(unchangedFailure.tag)
 if (Result.IsOk(summary)) console.log(summary.data)
 ```
 
-Register exact tag handlers before broad status handlers and the general `.any()` fallback.
+For supported cases, runtime priority is independent of registration order: a matching status/tag case wins, followed by a status-wide case and the general `.case('any', handler)` fallback. Register tag cases first, status-wide cases next, and the general fallback last so TypeScript can narrow subsequent handlers to the remaining variants.
+
+### Shared tags in different statuses
+
+When both branches share a tag, register it separately for each status:
+
+```ts
+import { Flow, Result } from '@wambata/resu'
+
+type Input = Result.Ok<'Shared', number> | Result.Error<'Shared', string>
+
+function summarize(input: Input) {
+	return Flow.Match.Strict(input)
+		.case('ok', 'Shared', (current) => `ok:${current.data}`)
+		.case('error', 'Shared', (current) => `error:${current.data}`)
+		.result()
+}
+
+const summary = summarize(Result.Error({ tag: 'Shared', data: 'offline' }))
+if (Result.IsOk(summary)) console.log(summary.data) // 'error:offline'
+```
+
+The `ok` handler receives the numeric payload; the `error` handler receives the string payload. Handling one status leaves the other variant available for the next case.
+
+### Allowing a partial strict match
+
+Pass `true` when you intentionally leave some variants unhandled:
+
+```ts
+import { Flow, Result } from '@wambata/resu'
+
+const ready = Result.Ok({ tag: 'Ready', data: 2 })
+const failure = Result.Error({ tag: 'Failure', data: 'broken' })
+type Input = typeof ready | typeof failure
+
+function transformReady(input: Input) {
+	return Flow.Match.Strict(input)
+		.case('ok', ['Ready'], (current) => current.data * 2)
+		.result(true)
+}
+
+const result = transformReady(failure)
+if (Result.IsError(result)) console.log(result.tag) // 'Failure'
+```
+
+Without `true`, TypeScript rejects this `.result()` call because the `Failure` variant is still unhandled. The flag allows unmatched variants; it does not suppress exceptions thrown by a handler.
 
 ### Returning a `Result` from a handler
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 const recovered = Flow.Match.Strict(
 	Result.Error({ tag: 'NotFound', data: { id: 42 } }),
 )
-	.error(['NotFound'], (current) => Result.Ok({
+	.case('error', ['NotFound'], (current) => Result.Ok({
 		tag: 'FallbackUser',
 		data: { id: current.data.id, name: 'Guest' },
 	}))
@@ -564,6 +617,12 @@ if (Result.IsOk(recovered)) console.log(recovered.data)
 ```
 
 An explicit `Result` returned by a handler preserves its branch, tag, and data. An exception inside a handler becomes `RuntimeError`.
+
+### Registration errors
+
+Register each status/tag pair, each status-wide handler, and the general fallback only once. Repeating a tag within one array is also a duplicate. The same tag under `'ok'` and `'error'` is a separate registration.
+
+TypeScript rejects cases for variants already removed from the remaining input union. JavaScript callers can still create duplicates or supply an invalid status. These registrations return a chain containing a deferred error: `.result()` returns `RuntimeError` before running any handler. Later `.case()` calls retain the error, and `.result(true)` does not suppress it. The original chain and sibling chains remain usable.
 
 ## Sequential computations: `Runtime`
 
@@ -583,7 +642,7 @@ An explicit `Result` returned by a handler preserves its branch, tag, and data. 
 `Runtime.Unwrap.Sync` returns the `data` field of a successful result:
 
 ```ts
-import { Result, Runtime } from 'resu'
+import { Result, Runtime } from '@wambata/resu'
 
 const total = Runtime.Gen.Sync(function* () {
 	const price = yield* Runtime.Unwrap.Sync(
@@ -609,7 +668,7 @@ A plain final generator value is wrapped in `Result.Ok`.
 Steps after the first `error` do not run:
 
 ```ts
-import { Result, Runtime } from 'resu'
+import { Result, Runtime } from '@wambata/resu'
 
 const order = Runtime.Gen.Sync(function* () {
 	const product = yield* Runtime.Unwrap.Sync(
@@ -632,7 +691,7 @@ const order = Runtime.Gen.Sync(function* () {
 An explicit `Result` returned by the generator also preserves its branch:
 
 ```ts
-import { Result, Runtime } from 'resu'
+import { Result, Runtime } from '@wambata/resu'
 
 const rejected = Runtime.Gen.Sync(function* () {
 	return Result.Error({
@@ -649,7 +708,7 @@ if (Result.IsError(rejected)) console.error(rejected.tag)
 `Runtime.UnwrapTagged.Sync` and `Runtime.UnwrapTagged.Async` return `{ tag, data }` when the next step needs the result tag:
 
 ```ts
-import { Result, Runtime } from 'resu'
+import { Result, Runtime } from '@wambata/resu'
 
 const labeled = Runtime.Gen.Sync(function* () {
 	const current = yield* Runtime.UnwrapTagged.Sync(
@@ -674,7 +733,7 @@ Every operation in the `Runtime.Unwrap*` family supports the `(value, map)` form
 Pass a plain value instead of a `Result` as the first argument. The second argument is a mapping function that creates an explicit `Result`. It must return `Result.Ok` or `Result.Error`; a plain return value does not satisfy this overload.
 
 ```ts
-import { Result, Runtime } from 'resu'
+import { Result, Runtime } from '@wambata/resu'
 
 const mappedSync = Runtime.Gen.Sync(function* () {
 	const count = yield* Runtime.Unwrap.Sync(
@@ -715,7 +774,7 @@ Sync variants accept a synchronous value and synchronous mapping function. Async
 Inside `Runtime.Gen.Async`, use `Runtime.Unwrap.Async` and `Runtime.UnwrapTagged.Async`. They accept a `Result` or a Promise that resolves to a `Result`:
 
 ```ts
-import { Result, Runtime } from 'resu'
+import { Result, Runtime } from '@wambata/resu'
 
 const asyncResult = await Runtime.Gen.Async(async function* () {
 	const count = yield* Runtime.Unwrap.Async(
@@ -740,114 +799,110 @@ const asyncResult = await Runtime.Gen.Async(async function* () {
 
 A thrown exception or rejected Promise becomes `RuntimeError`. Use synchronous `Unwrap` variants only inside `Runtime.Gen.Sync`, and asynchronous variants only inside `Runtime.Gen.Async`.
 
-## Observing `Result` values: emitters
+## Observing `Result` values: Emitter
 
-Emitters provide a central way to observe created `Result` values, for example for logging or diagnostics. Create an emitter, subscribe to it, and register it:
+Use `Result.Emitter` to observe newly created results for logging or diagnostics. Subscribe directly; the callback decides which results to handle.
 
 | Operation | Purpose |
 |---|---|
-| `new Result.Emitters.Emitter(options)` | Create an emitter with automatic emission rules |
-| `Result.Emitters.Add(emitter)` | Register an emitter |
-| `Result.Emitters.Delete(emitter)` | Remove an emitter and clear its subscriptions |
-| `emitter.on(handler)` | Subscribe and receive an unsubscribe function |
-| `emitter.emit(result)` | Emit a specific `Result` manually |
-| `emitter.off(handler)` | Remove one subscription |
-| `emitter.offAll()` | Remove all subscriptions |
+| `Result.Emitter.Subscribe(callback)` | Observe future results and receive an unsubscribe function |
+| `Result.Emitter.Unsubscribe(callback)` | Remove the subscription using the same callback reference |
+| `off()` | Remove the callback's current subscription; repeated calls are safe |
+
+`Subscribe` accepts only a callback. The callback receives `(result, off)`, where `off` is the same function returned by `Subscribe`.
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
-const emitter = new Result.Emitters.Emitter({
-	emitError: true,
+const off = Result.Emitter.Subscribe((result) => {
+	if (result.status !== 'error') return
+	console.error(result.tag, result.data)
 })
 
-const off = emitter.on((result) => {
-	console.log(result.status, result.tag, result.data)
-})
-
-Result.Emitters.Add(emitter)
-
-Result.Error({
-	tag: 'SaveFailed',
-	data: { id: 42 },
-})
+Result.Ok({ tag: 'Saved', data: { id: 42 } }) // callback ignores this result
+Result.Error({ tag: 'SaveFailed', data: { id: 42 } }) // logged
 
 off()
-Result.Emitters.Delete(emitter)
 ```
 
-`Result.Emitters.Add` enables automatic emission through this emitter. `Result.Emitters.Delete` removes it from the global list and clears its subscriptions.
+Subscribers run synchronously, before result construction returns. Every subscriber receives the original, shallow-frozen `Result` instance. Its fields are readonly, but `data` and nested payload objects retain their original references and mutability. Payload changes made by one subscriber are visible to later subscribers and to the caller.
 
-Always remove an emitter when it is no longer needed. This is particularly important in long-running processes and tests.
+Subscriptions observe future creation events without replaying earlier results. Unsubscribe when observation is no longer needed.
 
-### Filtering automatic events
+### Filtering and subscription lifetime
 
-The `emitOk` and `emitError` options accept either `true` or a predicate. The following emitter receives only `ok` values tagged `Audit` and all errors:
+Filter by status, tag, or payload inside the callback. To handle only the first matching result, unsubscribe before doing further work:
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
-const audit = new Result.Emitters.Emitter({
-	emitOk: (result) => result.tag === 'Audit',
-	emitError: true,
+Result.Emitter.Subscribe((result, off) => {
+	if (result.status !== 'error') return
+
+	off()
+	console.error(result.tag, result.data)
 })
 
-Result.Emitters.Add(audit)
-
-Result.Ok({ tag: 'Audit', data: 'saved' })
-Result.Ok({ tag: 'Ignored', data: 'draft' }) // not emitted
-Result.Error({ tag: 'Failure', data: 'broken' })
-
-Result.Emitters.Delete(audit)
+Result.Ok({ tag: 'Ready' }) // subscription remains active
+Result.Error({ tag: 'FirstFailure' }) // logged, then no further notifications
+Result.Error({ tag: 'LaterFailure' }) // callback is no longer subscribed
 ```
 
-### Manual emission and local overrides
+Repeated registration of the same function keeps one subscription and supplies a new `off` function to the callback. Any previously returned `off` for that function removes its current subscription, including a later registration. Separate function references are separate subscribers.
 
-`emitter.emit(result)` emits a specific result manually. The `emit` option on an individual `Result` forces automatic emission on or off:
+There are no built-in `once`, `signal`, or status-filter options. Consumers manage filtering and lifetime explicitly.
+
+### Suppressing creation events
+
+Results notify subscribers by default, regardless of status. `emit: true` has the same behavior; `emit: false` suppresses notification for that result.
+
+Results created inside a subscriber normally cause a nested synchronous delivery. Use `emit: false` for subscriber-created results that should not generate further events:
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
-const events = new Result.Emitters.Emitter({ emitError: true })
-
-Result.Emitters.Add(events)
-
-events.emit(Result.Ok({
-	tag: 'Manual',
-	data: 1,
-}))
-
-Result.Ok({
-	data: 'force emission',
-	emit: true,
+const off = Result.Emitter.Subscribe((result) => {
+	const diagnostic = Result.Ok({
+		tag: 'Diagnostic',
+		data: result.status,
+		emit: false,
+	})
+	console.log(diagnostic.data)
 })
 
-Result.Error({
-	data: 'suppress emission',
-	emit: false,
-})
-
-Result.Emitters.Delete(events)
+Result.Error({ tag: 'Failure' }) // prints 'error'; Diagnostic is not delivered
+off()
 ```
 
-`emitter.on()` returns an unsubscribe function and passes the same function to the handler as its second argument. For explicit subscription management, use `emitter.off(handler)` and `emitter.offAll()`.
+`emit: false` affects only that construction. Results created by other functions called from the subscriber need their own emission policy. Conversion and flow helpers can also create new results; suppression does not automatically carry over to them.
+
+### Delivery and errors
+
+Each delivery uses the subscribers present at its start, in registration order. A new subscription starts receiving results on the next delivery. A subscriber removed after delivery starts still receives the current result if its callback has not run yet. Removing and registering a callback again does not repeat its call in the current delivery.
+
+Synchronous callback exceptions are reported through `console.error('Result Emitter Subscriber Execution Error:', error)`. The original thrown value is logged; later subscribers continue running, and reporting the error does not create a service `Result`.
+
+Callback return values are ignored. Returned promises are not awaited, and their rejections are not handled by the emitter; handle asynchronous failures in the callback.
 
 ## Types and utilities
 
 | Type | Purpose |
 |---|---|
+| `Result.Status`, `Result.Tag`, `Result.Data` | Shared types of result fields |
 | `Result.Any`, `Result.AnyOk`, `Result.AnyError` | Generic boundaries without known tags or data |
 | `Flow.Checked<T>` | The safely executed outcome of `T` |
 | `ResultExtract*` | Keep selected variants from a union |
 | `ResultExclude*` | Remove selected variants from a union |
 | `Utils.Source<T>` | Describe a value or compatible `Result` before normalization |
 
+`Result.Status` is `'ok' | 'error'`, `Result.Tag` is `string | null`, and `Result.Data` is `unknown`. These types are available from the root `Result` namespace; use a concrete payload type for domain results.
+
 ### Broad `Result.Any*` types
 
 `Result.Any`, `Result.AnyOk`, and `Result.AnyError` are suitable at boundaries where specific tags and data are not known in advance:
 
 ```ts
-import { Result } from 'resu'
+import { Result } from '@wambata/resu'
 
 function logResult(result: Result.Any) {
 	if (Result.IsOk(result)) logSuccess(result)
@@ -870,7 +925,7 @@ Prefer a specific union of domain results inside application code. Reserve broad
 `Flow.Checked<T>` describes the outcome of a flow operation: a normalized `T`, a preserved domain `error`, or a possible `RuntimeError`.
 
 ```ts
-import { Flow, Result } from 'resu'
+import { Flow, Result } from '@wambata/resu'
 
 type CheckedNumber = Flow.Checked<number>
 
@@ -884,14 +939,14 @@ function readNumber(result: CheckedNumber) {
 `Extract` keeps selected union variants, while `Exclude` removes them. The general form filters by status and an optional tag; specialized forms select `ok` or `error` directly.
 
 ```ts
-import type { ResultError } from 'resu/result-error'
-import type { ResultExclude } from 'resu/result-exclude'
-import type { ResultExcludeError } from 'resu/result-exclude-error'
-import type { ResultExcludeOk } from 'resu/result-exclude-ok'
-import type { ResultExtract } from 'resu/result-extract'
-import type { ResultExtractError } from 'resu/result-extract-error'
-import type { ResultExtractOk } from 'resu/result-extract-ok'
-import type { ResultOk } from 'resu/result-ok'
+import type { ResultError } from '@wambata/resu/result-error'
+import type { ResultExclude } from '@wambata/resu/result-exclude'
+import type { ResultExcludeError } from '@wambata/resu/result-exclude-error'
+import type { ResultExcludeOk } from '@wambata/resu/result-exclude-ok'
+import type { ResultExtract } from '@wambata/resu/result-extract'
+import type { ResultExtractError } from '@wambata/resu/result-extract-error'
+import type { ResultExtractOk } from '@wambata/resu/result-extract-ok'
+import type { ResultOk } from '@wambata/resu/result-ok'
 
 type DomainResult =
 	| ResultOk<'Ready', number>
@@ -911,7 +966,7 @@ type WithoutNotFound = ResultExclude<DomainResult, 'error', 'NotFound'>
 ### `Utils` helper types
 
 ```ts
-import type { Utils } from 'resu'
+import type { Utils } from '@wambata/resu'
 
 type PresentText = Utils.NonUndefined<string | undefined> // string
 type SourceNumber = Utils.Source<number>
@@ -922,7 +977,7 @@ type Tags = Utils.NonAmptyArray<'Ready' | 'Cached'>
 - `Utils.Source<T>` describes a plain value or compatible `Result` before normalization;
 - `Utils.NonUndefinedSource<T>` additionally excludes Promises, `undefined`, and `void` from synchronous contracts;
 - `Utils.NonUndefined<T>` removes `undefined` and `void` from a type;
-- `Utils.NonAmptyArray<T>` requires at least one item.
+- `Utils.NonAmptyArray<T>` requires at least one item and remains compatible with `T[]`.
 
 The `NonAmptyArray` spelling reflects the current WIP API and may be corrected before a stable release.
 
@@ -931,7 +986,7 @@ The `NonAmptyArray` spelling reflects the current WIP API and may be corrected b
 `Utils.RuntimeError` and `Utils.AbortError` create standard `error` branches. A string passed to `RuntimeError` is converted to an `Error` object; other values are preserved in `data`.
 
 ```ts
-import { Utils } from 'resu'
+import { Utils } from '@wambata/resu'
 
 const runtimeFailure = Utils.RuntimeError('Cannot decode response')
 const cancelled = Utils.AbortError({ reason: 'cancelled' })
@@ -945,16 +1000,27 @@ cancelled.tag      // 'AbortError'
 For focused imports, use the public paths from the package `exports` map. A direct export name includes its operation group:
 
 ```ts
-import { FlowFunctionSync } from 'resu/flow-function-sync'
-import { FlowTrySync } from 'resu/flow-try-sync'
-import { ResultIsOk } from 'resu/result-is-ok'
-import { ResultOk } from 'resu/result-ok'
-import { RuntimeGenSync } from 'resu/runtime-gen-sync'
-import type { ResultExtractOk } from 'resu/result-extract-ok'
+import { FlowFunctionSync } from '@wambata/resu/flow-function-sync'
+import { FlowTrySync } from '@wambata/resu/flow-try-sync'
+import { ResultIsOk } from '@wambata/resu/result-is-ok'
+import { ResultOk } from '@wambata/resu/result-ok'
+import { RuntimeGenSync } from '@wambata/resu/runtime-gen-sync'
+import type { ResultExtractOk } from '@wambata/resu/result-extract-ok'
 ```
+
+Field types are available as `Result.Status`, `Result.Tag`, and `Result.Data` through the root import, or as dedicated type-only imports:
+
+```ts
+import type { ResultStatus } from '@wambata/resu/result-status'
+import type { ResultTag } from '@wambata/resu/result-tag'
+import type { ResultData } from '@wambata/resu/result-data'
+```
+
+The former `@wambata/resu/types` entry has been removed. TypeScript resolves declarations through imports; adding the package to `compilerOptions.types` is not required.
 
 | Group | Public subpaths | Exported names |
 |---|---|---|
+| Result field types | `result-status`, `result-tag`, `result-data` | `ResultStatus`, `ResultTag`, `ResultData` (type only) |
 | Creating a `Result` | `result-ok`, `result-error` | `ResultOk`, `ResultError` |
 | Converting a `Result` | `result-ok-from`, `result-error-from`, `result-ok-from-unless-error`, `result-error-from-unless-ok` | `ResultOkFrom`, `ResultErrorFrom`, `ResultOkFromUnlessError`, `ResultErrorFromUnlessOk` |
 | Type guards | `result-is`, `result-is-ok`, `result-is-error` | `ResultIs`, `ResultIsOk`, `ResultIsError` |
@@ -962,7 +1028,7 @@ import type { ResultExtractOk } from 'resu/result-extract-ok'
 | Safe functions | `flow-function-sync`, `flow-function-async` | `FlowFunctionSync`, `FlowFunctionAsync` |
 | Matching | `flow-match-loose`, `flow-match-strict` | `FlowMatchLoose`, `FlowMatchStrict` |
 | Runtime sequences | `runtime-gen-sync`, `runtime-gen-async`, `runtime-unwrap-sync`, `runtime-unwrap-async`, `runtime-unwrap-tagged-sync`, `runtime-unwrap-tagged-async` | `RuntimeGenSync`, `RuntimeGenAsync`, `RuntimeUnwrapSync`, `RuntimeUnwrapAsync`, `RuntimeUnwrapTaggedSync`, `RuntimeUnwrapTaggedAsync` |
-| Emitters | `emitter`, `result-emitters-add`, `result-emitters-delete` | `Emitter`, `ResultEmittersAdd`, `ResultEmittersDelete` |
+| Result events | `emitter`, `result-emitter-subscribe`, `result-emitter-unsubscribe` | `Emitter` (shared object with `subscribe` and `unsubscribe`), `ResultEmitterSubscribe`, `ResultEmitterUnsubscribe` |
 | Result types | `result-any`, `result-any-ok`, `result-any-error`, `result-extract`, `result-extract-ok`, `result-extract-error`, `result-exclude`, `result-exclude-ok`, `result-exclude-error`, `flow-checked` | `ResultAny`, `ResultAnyOk`, `ResultAnyError`, `ResultExtract`, `ResultExtractOk`, `ResultExtractError`, `ResultExclude`, `ResultExcludeOk`, `ResultExcludeError`, `FlowChecked` |
 | Built-in errors | `utils/utils-error-runtime`, `utils/utils-error-abort` | `UtilsErrorRuntime`, `UtilsErrorAbort` |
 | Helper types | `utils/utils-source`, `utils/utils-non-undefined-source`, `utils/utils-non-undefined`, `utils/utils-non-empty-array` | `UtilsSource`, `UtilsNonUndefinedSource`, `UtilsNonUndefined`, `UtilsNonAmptyArray` |
@@ -976,7 +1042,7 @@ Root namespaces are usually more convenient in application code. Subpath imports
 - A function passed to a synchronous or asynchronous flow must not return `undefined` or `void`; the types reject these contracts.
 - Use synchronous `Unwrap` variants inside `Runtime.Gen.Sync` and asynchronous variants inside `Runtime.Gen.Async`.
 - Browser compatibility is not guaranteed yet.
-- Emitters and cancellation require the environment to provide `EventTarget`, `CustomEvent`, `AbortSignal`, and `AbortController`.
+- Cancellation requires the environment to provide `AbortSignal` and `AbortController`.
 
 ## Support and contributing
 
@@ -991,11 +1057,19 @@ This section is for maintainers. Run the following commands from the monorepo ro
 ```bash
 npm run build --workspace @wambata/resu
 npm run lint --workspace @wambata/resu
-npm run test:runtime --workspace @wambata/resu
-npm run test:types --workspace @wambata/resu
+npm test --workspace @wambata/resu
 ```
 
-Vitest verifies runtime behavior, while tsd verifies TypeScript inference and narrowing.
+`npm test` runs TypeScript checking, tsd inference tests, and Vitest runtime tests in that order. Run a check separately or collect coverage with:
+
+```bash
+npm run test:typecheck --workspace @wambata/resu
+npm run test:runtime --workspace @wambata/resu
+npm run test:types --workspace @wambata/resu
+npm run test:coverage --workspace @wambata/resu
+```
+
+Runtime tests are in `test/runtime`; type assertions are in `test/types`. Coverage checks run type checks first, then Vitest with the V8 provider. Reports are written to `packages/ecosystem.resu/coverage`; the configured thresholds are 100% lines and functions, 99% statements, and 98% branches.
 
 ## License
 

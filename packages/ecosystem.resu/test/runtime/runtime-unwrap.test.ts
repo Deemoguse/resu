@@ -1,99 +1,147 @@
-import { describe, expect, it } from 'vitest'
-import { RuntimeUnwrapAsync } from '../../src/operations/runtime-unwrap-async'
-import { RuntimeUnwrapSync } from '../../src/operations/runtime-unwrap-sync'
-import { RuntimeUnwrapTaggedAsync } from '../../src/operations/runtime-unwrap-tagged-async'
-import { RuntimeUnwrapTaggedSync } from '../../src/operations/runtime-unwrap-tagged-sync'
-import { ResultOk } from '../../src/operations/result-ok'
-import { expectErrorResult, expectOkResult } from './helpers/result-assertions'
+import { describe, expect, it, vi } from 'vitest'
+import { Result, Runtime } from '../../src/namespaces/index'
+import { expectErrorResult, expectResult } from './helpers/result-assertions'
 
-describe('RuntimeUnwrapSync', () => {
-	it('returns a generator that yields the result and gives Result.data back to yield*', () => {
-		function* runtime() {
-			const value = yield* RuntimeUnwrapSync(ResultOk({ tag: 'Ready', data: 5 }))
-			return value + 1
-		}
-
-		const iter = runtime()
-
-		expectOkResult(iter.next().value, { tag: 'Ready', data: 5 })
-		expect(iter.next()).toEqual({ value: 6, done: true })
+describe('Runtime.Unwrap.Sync', () => {
+	it('yields the original result once and returns its payload', () => {
+		const input = Result.Ok({ tag: 'Ready', data: { id: 1 } })
+		const iterator = Runtime.Unwrap.Sync(input)
+		expect(iterator.next()).toEqual({ done: false, value: input })
+		expect(iterator.next()).toEqual({ done: true, value: input.data })
+		expect(iterator.next()).toEqual({ done: true, value: undefined })
 	})
 
-	it('maps a non-result value through the callback before unwrapping it', () => {
-		function* runtime() {
-			const value = yield* RuntimeUnwrapSync(
-				'ready',
-				(input) => ResultOk({ tag: 'Mapped', data: input.length }),
-			)
-			return value * 2
-		}
-
-		const iter = runtime()
-
-		expectOkResult(iter.next().value, { tag: 'Mapped', data: 5 })
-		expect(iter.next()).toEqual({ value: 10, done: true })
+	it('evaluates the mapper lazily and exactly once', () => {
+		const mapper = vi.fn((value: number) => Result.Ok({ tag: 'Mapped', data: value * 2 }))
+		const iterator = Runtime.Unwrap.Sync(3, mapper)
+		expect(mapper).not.toHaveBeenCalled()
+		const first = iterator.next()
+		expectResult(first.value, { status: 'ok', tag: 'Mapped', data: 6 })
+		expect(mapper).toHaveBeenCalledExactlyOnceWith(3)
+		expect(iterator.next()).toEqual({ done: true, value: 6 })
+		expect(mapper).toHaveBeenCalledTimes(1)
 	})
 
-	it('returns a RuntimeError result generator for a non-result without a mapper', () => {
-		const iter = (RuntimeUnwrapSync as unknown as (value: unknown) => Generator<unknown, unknown>)('ready')
-		const first = iter.next()
-
-		expect(first.done).toBe(false)
-		expect(expectErrorResult(first.value, 'RuntimeError').data).toBeInstanceOf(Error)
+	it('skips the mapper for an existing result', () => {
+		const input = Result.Ok({ data: 3 })
+		const mapper = vi.fn(() => Result.Ok({ data: 99 }))
+		const iterator = Runtime.Unwrap.Sync(input, mapper)
+		expect(iterator.next().value).toBe(input)
+		expect(mapper).not.toHaveBeenCalled()
 	})
-})
 
-describe('RuntimeUnwrapTaggedSync', () => {
-	it('returns { data, tag } from yield*', () => {
-		function* runtime() {
-			const value = yield* RuntimeUnwrapTaggedSync(ResultOk({ tag: 'Ready', data: 7 }))
-			return `${value.tag}:${value.data}`
-		}
+	it('yields a domain error from the mapper', () => {
+		const iterator = Runtime.Unwrap.Sync('invalid', () => Result.Error({ tag: 'Invalid', data: 'invalid' }))
+		expectResult(iterator.next().value, { status: 'error', tag: 'Invalid', data: 'invalid' })
+	})
 
-		const iter = runtime()
+	it('yields RuntimeError when the mapper throws', () => {
+		const error = new Error('mapper failed')
+		const iterator = Runtime.Unwrap.Sync(1, (): Result.Any => { throw error })
+		expect(expectErrorResult(iterator.next().value, 'RuntimeError').data).toBe(error)
+	})
 
-		expectOkResult(iter.next().value, { tag: 'Ready', data: 7 })
-		expect(iter.next()).toEqual({ value: 'Ready:7', done: true })
+	it('yields RuntimeError for a plain value without a mapper from JavaScript', () => {
+		const unwrap = Runtime.Unwrap.Sync as unknown as (value: unknown) => Generator<Result.Any>
+		expect(expectErrorResult(unwrap('invalid').next().value, 'RuntimeError').data).toBeInstanceOf(Error)
 	})
 })
 
-describe('RuntimeUnwrapAsync', () => {
-	it('returns an async generator that yields the result and gives Result.data back to yield*', async () => {
-		async function* runtime() {
-			const value = yield* RuntimeUnwrapAsync(
-				Promise.resolve('ready'),
-				async (input) => ResultOk({ tag: 'Mapped', data: input.length }),
-			)
-			return value + 1
-		}
-
-		const iter = runtime()
-
-		expectOkResult((await iter.next()).value, { tag: 'Mapped', data: 5 })
-		expect(await iter.next()).toEqual({ value: 6, done: true })
+describe('Runtime.UnwrapTagged.Sync', () => {
+	it.each(['Ready', null])('returns only tag and payload for tag %j', (tag) => {
+		const input = Result.Ok({ tag, data: { id: 1 } })
+		const iterator = Runtime.UnwrapTagged.Sync(input)
+		expect(iterator.next().value).toBe(input)
+		const completed = iterator.next()
+		expect(completed).toEqual({ done: true, value: { tag, data: input.data } })
+		expect(completed.value?.data).toBe(input.data)
 	})
 
-	it('returns a RuntimeError result generator for a non-result without a mapper', async () => {
-		const iter = (RuntimeUnwrapAsync as unknown as (value: Promise<unknown>) => AsyncGenerator<unknown, unknown>)(Promise.resolve('ready'))
-		const first = await iter.next()
-
-		expect(first.done).toBe(false)
-		expect(expectErrorResult(first.value, 'RuntimeError').data).toBeInstanceOf(Error)
+	it('returns the mapped tag and payload', () => {
+		const iterator = Runtime.UnwrapTagged.Sync(2, (value) => Result.Ok({ tag: 'Mapped', data: value * 2 }))
+		expectResult(iterator.next().value, { status: 'ok', tag: 'Mapped', data: 4 })
+		expect(iterator.next()).toEqual({ done: true, value: { tag: 'Mapped', data: 4 } })
 	})
 })
 
-describe('RuntimeUnwrapTaggedAsync', () => {
-	it('returns { data, tag } from yield*', async () => {
-		async function* runtime() {
-			const value = yield* RuntimeUnwrapTaggedAsync(
-				Promise.resolve(ResultOk({ tag: 'Ready', data: 9 })),
-			)
-			return `${value.tag}:${value.data}`
-		}
+describe('Runtime.Unwrap.Async', () => {
+	it('accepts an immediate result and returns an async iterator', async () => {
+		const input = Result.Ok({ tag: 'Ready', data: 3 })
+		const iterator = Runtime.Unwrap.Async(input)
+		expect(await iterator.next()).toEqual({ done: false, value: input })
+		expect(await iterator.next()).toEqual({ done: true, value: 3 })
+		expect(await iterator.next()).toEqual({ done: true, value: undefined })
+	})
 
-		const iter = runtime()
+	it('awaits a promised result', async () => {
+		const input = Result.Ok({ tag: 'Ready', data: { id: 1 } })
+		const iterator = Runtime.Unwrap.Async(Promise.resolve(input))
+		expect((await iterator.next()).value).toBe(input)
+		expect(await iterator.next()).toEqual({ done: true, value: input.data })
+	})
 
-		expectOkResult((await iter.next()).value, { tag: 'Ready', data: 9 })
-		expect(await iter.next()).toEqual({ value: 'Ready:9', done: true })
+	it('awaits both the source value and the mapped result', async () => {
+		const mapper = vi.fn(async (value: string) => Result.Ok({ tag: 'Mapped', data: value.length }))
+		const iterator = Runtime.Unwrap.Async(Promise.resolve('ready'), mapper)
+		expect(mapper).not.toHaveBeenCalled()
+		expectResult((await iterator.next()).value, { status: 'ok', tag: 'Mapped', data: 5 })
+		expect(mapper).toHaveBeenCalledExactlyOnceWith('ready')
+		expect(await iterator.next()).toEqual({ done: true, value: 5 })
+	})
+
+	it('accepts a synchronous mapper', async () => {
+		const iterator = Runtime.Unwrap.Async(3, (value) => Result.Ok({ data: value * 2 }))
+		expectResult((await iterator.next()).value, { status: 'ok', tag: null, data: 6 })
+	})
+
+	it('skips the mapper for an existing result', async () => {
+		const input = Result.Ok({ data: 3 })
+		const mapper = vi.fn(() => Result.Ok({ data: 99 }))
+		const iterator = Runtime.Unwrap.Async(Promise.resolve(input), mapper)
+		expect((await iterator.next()).value).toBe(input)
+		expect(mapper).not.toHaveBeenCalled()
+	})
+
+	it('yields a domain error from the mapper', async () => {
+		const iterator = Runtime.Unwrap.Async('invalid', async () => Result.Error({ tag: 'Invalid', data: 'invalid' }))
+		expectResult((await iterator.next()).value, { status: 'error', tag: 'Invalid', data: 'invalid' })
+	})
+
+	it('yields RuntimeError when the mapper throws synchronously', async () => {
+		const error = new Error('mapper threw')
+		const iterator = Runtime.Unwrap.Async<number, Result.Any>(1, () => { throw error })
+		expect(expectErrorResult((await iterator.next()).value, 'RuntimeError').data).toBe(error)
+	})
+
+	it('yields RuntimeError when the mapper rejects', async () => {
+		const error = new Error('mapper rejected')
+		const iterator = Runtime.Unwrap.Async(1, () => Promise.reject(error) as Promise<Result.Any>)
+		expect(expectErrorResult((await iterator.next()).value, 'RuntimeError').data).toBe(error)
+	})
+
+	it('propagates a rejected source Promise to the consuming runtime', async () => {
+		const error = new Error('source rejected')
+		const iterator = Runtime.Unwrap.Async(Promise.reject(error) as Promise<Result.Any>)
+		await expect(iterator.next()).rejects.toBe(error)
+	})
+
+	it('yields RuntimeError for a plain value without a mapper from JavaScript', async () => {
+		const unwrap = Runtime.Unwrap.Async as unknown as (value: unknown) => AsyncGenerator<Result.Any>
+		expect(expectErrorResult((await unwrap(Promise.resolve('invalid')).next()).value, 'RuntimeError').data).toBeInstanceOf(Error)
+	})
+})
+
+describe('Runtime.UnwrapTagged.Async', () => {
+	it.each(['Ready', null])('returns only tag and payload for tag %j', async (tag) => {
+		const input = Result.Ok({ tag, data: { id: 1 } })
+		const iterator = Runtime.UnwrapTagged.Async(Promise.resolve(input))
+		expect((await iterator.next()).value).toBe(input)
+		expect(await iterator.next()).toEqual({ done: true, value: { tag, data: input.data } })
+	})
+
+	it('returns the mapped tag and payload', async () => {
+		const iterator = Runtime.UnwrapTagged.Async(2, async (value) => Result.Ok({ tag: 'Mapped', data: value * 2 }))
+		expectResult((await iterator.next()).value, { status: 'ok', tag: 'Mapped', data: 4 })
+		expect(await iterator.next()).toEqual({ done: true, value: { tag: 'Mapped', data: 4 } })
 	})
 })

@@ -1,88 +1,147 @@
 import { describe, expect, it } from 'vitest'
-import { ResultError } from '../../src/operations/result-error'
-import { ResultErrorFrom } from '../../src/operations/result-error-from'
-import { ResultErrorFromUnlessOk } from '../../src/operations/result-error-from-unless-ok'
-import { ResultIs } from '../../src/operations/result-is'
-import { ResultIsError } from '../../src/operations/result-is-error'
-import { ResultIsOk } from '../../src/operations/result-is-ok'
-import { ResultOk } from '../../src/operations/result-ok'
-import { ResultOkFrom } from '../../src/operations/result-ok-from'
-import { ResultOkFromUnlessError } from '../../src/operations/result-ok-from-unless-error'
-import { expectErrorResult, expectOkResult } from './helpers/result-assertions'
+import { Result } from '../../src/namespaces/index'
+import { expectResult } from './helpers/result-assertions'
 
-describe('result constructors', () => {
-	it('creates ok and error results with optional payload', () => {
-		expectOkResult(ResultOk(), { tag: null, data: null })
-		expectErrorResult(ResultError({ tag: 'Failure', data: 42 }), 'Failure')
-		expect(ResultError({ tag: 'Failure', data: 42 }).data).toBe(42)
+const constructors = [
+	{ name: 'Result.Ok', create: Result.Ok, status: 'ok' },
+	{ name: 'Result.Error', create: Result.Error, status: 'error' },
+] as const
+
+describe.each(constructors)('$name', ({ create, status }) => {
+	describe('defaults and payloads', () => {
+		it('defaults omitted fields to null', () => {
+			expectResult(create(), { status, tag: null, data: null })
+			expectResult(create({}), { status, tag: null, data: null })
+			expectResult(create({ tag: undefined, data: undefined }), { status, tag: null, data: null })
+		})
+
+		it.each([
+			{ label: 'zero', data: 0 },
+			{ label: 'false', data: false },
+			{ label: 'empty string', data: '' },
+			{ label: 'null', data: null },
+			{ label: 'object', data: { id: 1 } },
+			{ label: 'array', data: [1, 2] },
+		])('preserves $label payloads', ({ data }) => {
+			const result = create<'Ready', unknown>({ tag: 'Ready', data })
+			expectResult(result, { status, tag: 'Ready', data })
+			expect(result.data).toBe(data)
+		})
+
+		it('preserves an empty tag', () => {
+			expectResult(create({ tag: '', data: 1 }), { status, tag: '', data: 1 })
+		})
+	})
+
+	describe('immutability', () => {
+		it('freezes the result fields', () => {
+			const result = create({ tag: 'Ready', data: 1 })
+			expect(Object.isFrozen(result)).toBe(true)
+			expect(Reflect.set(result, 'tag', 'Changed')).toBe(false)
+			expect(Reflect.set(result, 'data', 2)).toBe(false)
+			expect(Reflect.set(result, 'status', status === 'ok' ? 'error' : 'ok')).toBe(false)
+			expectResult(result, { status, tag: 'Ready', data: 1 })
+		})
+
+		it('keeps payload identity without freezing the payload', () => {
+			const data = { count: 1 }
+			const result = create({ data })
+			data.count = 2
+			expect(result.data).toBe(data)
+			expect(result.data.count).toBe(2)
+			expect(Object.isFrozen(data)).toBe(false)
+		})
+
+		it('creates independent containers on repeated calls', () => {
+			expect(create({ data: 1 })).not.toBe(create({ data: 1 }))
+		})
 	})
 })
 
-describe('result from value helpers', () => {
-	it('creates a new ok result from a plain value', () => {
-		expectOkResult(ResultOkFrom('ready'), { tag: null, data: 'ready' })
-		expectOkResult(ResultOkFrom('ready', 'State'), { tag: 'State', data: 'ready' })
+describe.each([
+	{ name: 'Result.OkFrom', convert: Result.OkFrom, status: 'ok' },
+	{ name: 'Result.ErrorFrom', convert: Result.ErrorFrom, status: 'error' },
+] as const)('$name', ({ convert, status }) => {
+	it.each([0, false, '', null, { count: 2 }])('wraps a plain value: %j', (data) => {
+		expectResult(convert(data), { status, tag: null, data })
 	})
 
-	it('creates a new result from an existing result and preserves payload', () => {
-		const source = ResultError({ tag: 'Failure', data: new Error('boom') })
-		const next = ResultOkFrom(source)
-
-		expect(next).not.toBe(source)
-		expectOkResult(next, { tag: 'Failure', data: source.data })
+	it('wraps a lookalike object as data', () => {
+		const data = { status: 'error', tag: 'Lookalike', data: 1 }
+		expect(convert(data).data).toBe(data)
 	})
 
-	it('overrides the tag when creating a result from another result', () => {
-		const source = ResultOk({ tag: 'Old', data: 5 })
-		expectErrorResult(ResultErrorFrom(source, 'New'), 'New')
-		expect(ResultErrorFrom(source, 'New').data).toBe(5)
-	})
+	describe.each(constructors)('converting $name', ({ create }) => {
+		it('preserves tag and payload in a new frozen container', () => {
+			const data = { count: 2 }
+			const source = create({ tag: 'Source', data })
+			const result = convert(source)
+			expectResult(result, { status, tag: 'Source', data })
+			expect(result).not.toBe(source)
+			expect(result.data).toBe(data)
+			expect(Object.isFrozen(result)).toBe(true)
+		})
 
-	it('uses null as an explicit tag override', () => {
-		const source = ResultError({ tag: 'Failure', data: 'broken' })
-		const result = ResultOkFrom(source, null)
-
-		expectOkResult(result, { tag: null, data: 'broken' })
-	})
-})
-
-describe('result from unless helpers', () => {
-	it('keeps the opposite status and tag unchanged', () => {
-		const failure = ResultError({ tag: 'Failure', data: 'broken' })
-		const success = ResultOk({ tag: 'Success', data: 7 })
-
-		const okFromFailure = ResultOkFromUnlessError(failure, 'Ignored')
-		const errorFromSuccess = ResultErrorFromUnlessOk(success, 'Ignored')
-
-		expect(okFromFailure).not.toBe(failure)
-		expect(errorFromSuccess).not.toBe(success)
-		expectErrorResult(okFromFailure, 'Failure')
-		expect(okFromFailure.data).toBe('broken')
-		expectOkResult(errorFromSuccess, { tag: 'Success', data: 7 })
-	})
-
-	it('creates a result with the requested status when the input status matches or is not a result', () => {
-		expectOkResult(ResultOkFromUnlessError('value', 'Tag'), { tag: 'Tag', data: 'value' })
-
-		const source = ResultOk({ tag: 'Source', data: 1 })
-		const next = ResultOkFromUnlessError(source, 'Next')
-		expectOkResult(next, { tag: 'Next', data: 1 })
-		expect(next).not.toBe(source)
+		it.each(['Override', '', null])('replaces the tag with %j', (tag) => {
+			const source = create({ tag: 'Source', data: 2 })
+			expectResult(convert(source, tag), { status, tag, data: 2 })
+			expect(source.tag).toBe('Source')
+		})
 	})
 })
 
-describe('result guards', () => {
-	it('detects result instances and narrows by status', () => {
-		const success = ResultOk({ tag: 'Ready', data: 1 })
-		const failure = ResultError({ tag: 'Failure', data: 2 })
-		const lookalike = { status: 'ok', tag: 'Ready', data: 1 }
+describe.each([
+	{ name: 'Result.OkFromUnlessError', convert: Result.OkFromUnlessError, status: 'ok' },
+	{ name: 'Result.ErrorFromUnlessOk', convert: Result.ErrorFromUnlessOk, status: 'error' },
+] as const)('$name', ({ convert, status }) => {
+	it('wraps a plain value using the requested status', () => {
+		expectResult(convert(0, 'Converted'), { status, tag: 'Converted', data: 0 })
+	})
 
-		expect(ResultIs(success)).toBe(true)
-		expect(ResultIs(failure)).toBe(true)
-		expect(ResultIs(lookalike)).toBe(false)
-		expect(ResultIsOk(success)).toBe(true)
-		expect(ResultIsOk(failure)).toBe(false)
-		expect(ResultIsError(success)).toBe(false)
-		expect(ResultIsError(failure)).toBe(true)
+	it('applies the tag override when the input has the requested status', () => {
+		const source = status === 'ok'
+			? Result.Ok({ tag: 'Source', data: 2 })
+			: Result.Error({ tag: 'Source', data: 2 })
+		const result = convert(source, null)
+		expectResult(result, { status, tag: null, data: 2 })
+		expect(result).not.toBe(source)
+	})
+
+	it('preserves the opposite status and ignores the supplied tag', () => {
+		const source = status === 'ok'
+			? Result.Error({ tag: 'Failure', data: { id: 1 } })
+			: Result.Ok({ tag: 'Ready', data: { id: 1 } })
+		const result = convert(source, 'Ignored')
+		expectResult(result, { status: source.status, tag: source.tag, data: source.data })
+		expect(result).not.toBe(source)
+		expect(result.data).toBe(source.data)
+	})
+})
+
+describe('Result guards', () => {
+	it.each([
+		{ name: 'ok', create: Result.Ok, isOk: true, isError: false },
+		{ name: 'error', create: Result.Error, isOk: false, isError: true },
+	])('recognizes the $name branch', ({ create, isOk, isError }) => {
+		const result = create({ tag: 'Domain', data: 1 })
+		expect(Result.Is(result)).toBe(true)
+		expect(Result.IsOk(result)).toBe(isOk)
+		expect(Result.IsError(result)).toBe(isError)
+	})
+
+	it.each([
+		{ label: 'undefined', value: undefined },
+		{ label: 'null', value: null },
+		{ label: 'number', value: 0 },
+		{ label: 'string', value: 'ok' },
+		{ label: 'boolean', value: false },
+		{ label: 'array', value: [] },
+		{ label: 'plain object', value: {} },
+		{ label: 'lookalike', value: { status: 'ok', tag: 'Ready', data: 1 } },
+		{ label: 'serialized result', value: JSON.parse(JSON.stringify(Result.Ok({ data: 1 }))) as unknown },
+	])('rejects $label values', ({ value }) => {
+		expect(Result.Is(value)).toBe(false)
+		expect(Result.IsOk(value)).toBe(false)
+		expect(Result.IsError(value)).toBe(false)
 	})
 })
