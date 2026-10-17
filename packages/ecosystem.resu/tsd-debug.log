@@ -1,0 +1,31 @@
+[ERR!] cwd  : D:\Projects\My Projects\javascript\wambata-resu\packages\ecosystem.resu
+[ERR!] os   : Windows_NT 10.0.26200
+[ERR!] argv : "C:\\nvm4w\\nodejs\\node.exe" "D:\\Projects\\My Projects\\javascript\\wambata-resu\\node_modules\\tsd\\build\\cli.js" "--typings" "./test/types/_entry.d.ts" "--files" "./test/types/**/*.test-d.ts"
+[ERR!] node : v24.4.1
+[ERR!] tsd  : 0.6.5
+[ERR!] Error: primordials is not defined
+[ERR!] CODE : undefined
+[ERR!] primordials is not defined
+[ERR!] If you need help, you may report this error at:
+    https://github.com/DefinitelyTyped/tsd/issues
+
+[ERR!] 
+ReferenceError: primordials is not defined
+    at fs.js:47:5
+    at req_ (D:\Projects\My Projects\javascript\wambata-resu\node_modules\natives\index.js:143:24)
+    at Object.req [as require] (D:\Projects\My Projects\javascript\wambata-resu\node_modules\natives\index.js:55:10)
+    at Object.<anonymous> (D:\Projects\My Projects\javascript\wambata-resu\node_modules\graceful-fs\fs.js:1:37)
+    at Module._compile (node:internal/modules/cjs/loader:1692:14)
+    at Object..js (node:internal/modules/cjs/loader:1824:10)
+    at Module.load (node:internal/modules/cjs/loader:1427:32)
+    at Module._load (node:internal/modules/cjs/loader:1250:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+
+[ERR!] tsd.json could not be retrieved
+
+[ERR!] .tsdrc could not be retrieved
+
+[ERR!] Please include the following file with any support request:
+    D:\Projects\My Projects\javascript\wambata-resu\packages\ecosystem.resu\tsd-debug.log
+
