@@ -1,2 +1,14 @@
-npx lint-staged
-npm run changeset
+#!/usr/bin/env sh
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+RESET='\033[0m'
+
+changeset_files_count=$(git diff-tree --no-commit-id --name-only -r HEAD | grep -c '^\.changeset/[^/]*\.md$' || true)
+
+if [ "$changeset_files_count" -eq 0 ]; then
+	printf "\n" >&2
+	printf "${RED}✗ No changeset files found.${RESET}\n" >&2
+	printf "\n" >&2
+	exit 1
+fi
