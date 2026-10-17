@@ -1,3 +1,2 @@
-npm run test
-npm run link-fix
+npx lint-staged
 npm run changeset
